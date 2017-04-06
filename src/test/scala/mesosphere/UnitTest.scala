@@ -86,7 +86,7 @@ trait ValidationTestLike extends Validation {
       case Success => fail(s"expected failure '$constraint'")
       case f: Failure =>
         val violations = Validation.allViolations(f)
-        val haveMatch = violations.exists { v => v.path.startsWith(path) && v.constraint.contains(constraint) }
+        val haveMatch = violations.exists { v => v.path == path && v.constraint == constraint }
         def description(c: ConstraintViolation): String = s"path: ${c.path} constraint:${c.constraint}"
         assert(haveMatch, s"No violation matched constraint:$constraint on path:$path\nGot violations:\n${violations.map(description).mkString("\n")}")
         f
