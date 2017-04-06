@@ -1,15 +1,13 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import com.wix.accord.scalatest.ResultMatchers
-import com.wix.accord.{ Validator, validate }
+import com.wix.accord.Validator
 import com.wix.accord.dsl._
-import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.raml.{ EnvVarValueOrSecret, Environment }
+import mesosphere.{ UnitTest, ValidationTestLike }
 
-class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationTestLike {
+class EnvVarValidationTest extends UnitTest with ValidationTestLike {
 
-  import Normalization._
   import EnvVarValidationMessages._
 
   "EnvVarValidation" when {
@@ -17,7 +15,7 @@ class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationT
 
       def compliantEnv(title: String, m: Map[String, EnvVarValueOrSecret], strictNameValidation: Boolean = true): Unit = {
         s"$title is compliant with validation rules" in new WithoutSecrets(strictNameValidation) {
-          validate(m) should be(aSuccess)
+          shouldSucceed(m)
         }
       }
 
@@ -31,26 +29,21 @@ class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationT
       behave like compliantEnv("numerical env", Environment("9" -> "x"), strictNameValidation = false)
 
       "fail with a numerical env variable name" in new WithoutSecrets {
-        validate(Wrapper(Environment("9" -> "x"))).normalize should failWith("/env(9)" -> MustContainOnlyAlphanumeric)
+        shouldViolate(Wrapper(Environment("9" -> "x")), "/env(9)", MustContainOnlyAlphanumeric)
       }
 
       def failsWhenExpected(subtitle: String, strictNameValidation: Boolean): Unit = {
         s"fail with empty variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
-          val alwaysExpected: Seq[ViolationMatcher] = Seq("/env()" -> "must not be empty")
-          val expectedNow =
-            if (strictNameValidation) alwaysExpected ++ (Seq[ViolationMatcher]("/env()" -> MustContainOnlyAlphanumeric))
-            else alwaysExpected
-
-          validate(Wrapper(Environment("" -> "x"))).normalize should failWith(expectedNow: _*)
+          shouldViolate(Wrapper(Environment("" -> "x")), "/env()", "must not be empty")
+          if (strictNameValidation) shouldViolate(Wrapper(Environment("" -> "x")), "/env()", MustContainOnlyAlphanumeric)
         }
 
         s"fail with too long variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
           val name = ("x" * 255)
-          val result = validate(Wrapper(Environment(name -> "x"))).normalize
           if (strictNameValidation) {
-            result should failWith(s"/env($name)" -> MustContainOnlyAlphanumeric)
+            shouldViolate(Wrapper(Environment(name -> "x")), s"/env($name)", MustContainOnlyAlphanumeric)
           } else {
-            result should be(aSuccess)
+            shouldNotViolate(Wrapper(Environment(name -> "x")))
           }
         }
       }

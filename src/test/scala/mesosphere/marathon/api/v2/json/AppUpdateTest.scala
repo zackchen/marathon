@@ -38,7 +38,7 @@ class AppUpdateTest extends UnitTest {
     }
     assert(violations.nonEmpty)
     assert(violations.exists(v =>
-      v.path.getOrElse(false) == path && v.message == template
+      v.path == path && v.constraint == template
     ), s"expected path $path and message $template, but instead found" + violations)
   }
 
@@ -48,7 +48,7 @@ class AppUpdateTest extends UnitTest {
       case obj => ValidationHelper.getAllRuleConstrains(validate(obj.get))
     }
     assert(!violations.exists(v =>
-      v.path.getOrElse(false) == path && v.message == template))
+      v.path == path && v.constraint == template))
   }
 
   "AppUpdate" should {

@@ -3,6 +3,7 @@ package api.v2.validation
 
 import java.util.regex.Pattern
 
+import com.wix.accord.Descriptions.Explicit
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
@@ -139,7 +140,7 @@ trait AppValidation {
           case (Some(_), None, EngineType.Mesos) => validate(container)(mesosDockerContainerValidator)
           case (None, Some(_), EngineType.Mesos) => validate(container)(mesosAppcContainerValidator)
           case (None, None, EngineType.Mesos) => validate(container)(mesosImagelessContainerValidator)
-          case _ => Failure(Set(RuleViolation(container, "mesos containers should specify, at most, a single image type", None)))
+          case _ => Failure(Set(RuleViolation(container, "mesos containers should specify, at most, a single image type")))
         }
       }
     }
@@ -179,22 +180,22 @@ trait AppValidation {
           import Protos.Constraint.Operator._
           (c.headOption, c.lift(1), c.lift(2)) match {
             case (None, None, _) =>
-              Failure(Set(RuleViolation(c, "Missing field and operator", None)))
+              Failure(Set(RuleViolation(c, "Missing field and operator")))
             case (Some("path"), Some(op), Some(value)) =>
               Try(Protos.Constraint.Operator.valueOf(op)).toOption.map {
                 case LIKE | UNLIKE =>
                   Try(Pattern.compile(value)).toOption.map(_ => Success).getOrElse(
-                    Failure(Set(RuleViolation(c, "Invalid regular expression", Some(value))))
+                    Failure(Set(RuleViolation(c, "Invalid regular expression", Explicit(value))))
                   )
                 case _ =>
                   Failure(Set(
-                    RuleViolation(c, "Operator must be one of LIKE, UNLIKE", None)))
+                    RuleViolation(c, "Operator must be one of LIKE, UNLIKE")))
               }.getOrElse(
                 Failure(Set(
-                  RuleViolation(c, s"unknown constraint operator $op", None)))
+                  RuleViolation(c, s"unknown constraint operator $op")))
               )
             case _ =>
-              Failure(Set(RuleViolation(c, s"Unsupported constraint ${c.mkString(",")}", None)))
+              Failure(Set(RuleViolation(c, s"Unsupported constraint ${c.mkString(",")}")))
           }
         }
       }
@@ -236,7 +237,7 @@ trait AppValidation {
         case (None, None) => validate(v)(validHostVolume)
         case (Some(_), None) => validate(v)(validPersistentVolume)
         case (None, Some(_)) => validate(v)(validExternalVolume)
-        case _ => Failure(Set(RuleViolation(v, "illegal combination of persistent and external volume fields", None)))
+        case _ => Failure(Set(RuleViolation(v, "illegal combination of persistent and external volume fields")))
       }
     }
   }

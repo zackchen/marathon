@@ -3,9 +3,11 @@ package api.v2
 
 import java.net._
 
+import com.wix.accord.Descriptions._
 import com.wix.accord._
 import com.wix.accord.dsl._
 import com.wix.accord.ViolationBuilder._
+import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.state.FetchUri
 import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
@@ -13,7 +15,6 @@ import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
 import scala.util.matching.Regex
-
 import scala.language.implicitConversions
 
 // TODO(jdef) move this into package "validation"
@@ -35,7 +36,7 @@ trait Validation {
   def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = {
     new Validator[Option[T]] {
       override def apply(option: Option[T]): Result = option.map(validator).getOrElse(
-        Failure(Set(RuleViolation(None, "not defined", None)))
+        Failure(Set(RuleViolation(None, "not defined")))
       )
     }
   }
@@ -55,20 +56,9 @@ trait Validation {
   implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
-
-        val violations: Set[Violation] = seq match {
-          case m: Map[_, _] =>
-            m.map(item => (item, validator(item))).collect {
-              case ((k, v), f: Failure) => GroupViolation(k, "not valid", Some(s"($k)"), f.violations)
-            }(collection.breakOut)
-          case _ =>
-            seq.map(item => (item, validator(item))).zipWithIndex.collect {
-              case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"($pos)"), f.violations)
-            }(collection.breakOut)
+        seq.zipWithIndex.foldLeft[Result](Success) {
+          case (result, (item, index)) => result.and(validator(item).applyDescription(Indexed(index.toLong)))
         }
-
-        if (violations.isEmpty) Success
-        else Failure(Set(GroupViolation(seq, "contains elements, which are not valid.", None, violations)))
       }
     }
   }
@@ -79,7 +69,13 @@ trait Validation {
         case Success => Success
         case f: Failure =>
           Failure(
-            f.violations.map(v => v.description.fold(v)(oldDescription => v.withDescription(change(oldDescription))))
+            f.violations.map { v =>
+              v.description match {
+                case Generic(s) => v.applyDescription(Generic(change(s)))
+                case Explicit(s) => v.applyDescription(Explicit(change(s)))
+                case _ => v
+              }
+            }
           )
       }
     }
@@ -102,63 +98,16 @@ trait Validation {
     Json.obj(
       "message" -> "Object is not valid",
       "details" -> {
-        f.violations
-          .flatMap(allRuleViolationsWithFullDescription(_))
-          .groupBy(_.description)
+        allViolations(f)
+          .groupBy(_.path)
           .map {
-            case (description, ruleViolation) =>
+            case (path, ruleViolations) =>
               Json.obj(
-                "path" -> description,
-                "errors" -> ruleViolation.map(r => JsString(r.constraint))
+                "path" -> path,
+                "errors" -> ruleViolations.map(_.constraint)
               )
           }
       })
-  }
-
-  // TODO: fix non-tail recursion
-  def allRuleViolationsWithFullDescription(
-    violation: Violation,
-    parentDesc: Option[String] = None,
-    prependSlash: Boolean = false): Set[RuleViolation] = {
-    def concatPath(parent: String, child: Option[String], slash: Boolean): String = {
-      child.map(c => parent + { if (slash) "/" else "" } + c).getOrElse(parent)
-    }
-
-    violation match {
-      case r: RuleViolation => Set(
-        parentDesc.map {
-          p =>
-            r.description.map {
-              // Error is on object level, having a parent description. Omit 'value', prepend '/' as root.
-              case "value" => r.withDescription("/" + p)
-              // Error is on property level, having a parent description. Prepend '/' as root.
-              case s: String =>
-                // This was necessary if you validate a sub field, e.g. volume.external.size is valid(...)
-                // generates a description containing "external.size".
-                val slashPath: Some[String] = Some(s.replace('.', '/'))
-                r.withDescription(concatPath("/" + p, slashPath, prependSlash))
-              // Error is on unknown level, having a parent description. Prepend '/' as root.
-            } getOrElse r.withDescription("/" + p)
-        } getOrElse {
-          r.withDescription(r.description.map {
-            // Error is on object level, having no parent description, being a root error.
-            case "value" => "/"
-            // Error is on property level, having no parent description, being a property of root error.
-            case s: String => "/" + s
-          } getOrElse "/")
-        })
-      case g: GroupViolation => g.children.flatMap { c =>
-        val dot = g.value match {
-          case _: Iterable[_] => false
-          case _ => true
-        }
-
-        val desc: Option[String] = parentDesc.map { p =>
-          concatPath(p, g.description, prependSlash)
-        }.orElse(g.description.map(d => concatPath("", Some(d), prependSlash)))
-        allRuleViolationsWithFullDescription(c, desc, dot)
-      }
-    }
   }
 
   def urlIsValid: Validator[String] = {
@@ -168,7 +117,7 @@ trait Validation {
           new URL(url)
           Success
         } catch {
-          case e: MalformedURLException => Failure(Set(RuleViolation(url, e.getMessage, None)))
+          case e: MalformedURLException => Failure(Set(RuleViolation(url, e.getMessage)))
         }
       }
     }
@@ -181,7 +130,7 @@ trait Validation {
           new URI(uri)
           Success
         } catch {
-          case _: URISyntaxException => Failure(Set(RuleViolation(uri, "URI has invalid syntax.", None)))
+          case _: URISyntaxException => Failure(Set(RuleViolation(uri, "URI has invalid syntax.")))
         }
       }
     }
@@ -225,7 +174,7 @@ trait Validation {
 
   private[this] def areUnique[A](seq: Seq[A], errorMessage: String): Result = {
     if (seq.size == seq.distinct.size) Success
-    else Failure(Set(RuleViolation(seq, errorMessage, None)))
+    else Failure(Set(RuleViolation(seq, errorMessage)))
   }
 
   def theOnlyDefinedOptionIn[A <: Product, B](product: A): Validator[Option[B]] =
@@ -241,7 +190,7 @@ trait Validation {
             if (n == 1)
               Success
             else
-              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.", None)))
+              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.")))
           case None => Success
         }
       }
@@ -274,7 +223,7 @@ trait Validation {
   def isTrue[T](constraint: T => String)(test: T => Boolean): Validator[T] = new Validator[T] {
     import ViolationBuilder._
     override def apply(value: T): Result = {
-      if (test(value)) Success else RuleViolation(value, constraint(value), None)
+      if (test(value)) Success else RuleViolation(value, constraint(value))
     }
   }
 
@@ -299,9 +248,50 @@ trait Validation {
     )
 
   def validateAll[T](x: T, all: Validator[T]*): Result = all.map(v => validate(x)(v)).fold(Success)(_ and _)
+
+  def allViolations(result: Result): Seq[ConstraintViolation] = {
+    def composePath(parent: Description, child: Description): String = "/" + {
+      (parent, child) match {
+        case (Empty | SelfReference, rhs) => renderPath(rhs)
+        case (lhs, Empty | SelfReference) => renderPath(lhs)
+        case (lhs, rhs) => renderPath(lhs) + "/" + renderPath(rhs)
+      }
+    }
+    def collectViolation(violation: Violation, parent: Description = Empty): Seq[ConstraintViolation] = {
+      violation match {
+        case RuleViolation(_, constraint, path) => Seq(ConstraintViolation(composePath(parent, path), constraint))
+        case GroupViolation(_, _, children, path) => children.to[Seq].flatMap(collectViolation(_, path))
+      }
+    }
+    result match {
+      case Success => Seq.empty
+      case Failure(violations) => violations.to[Seq].flatMap(collectViolation(_))
+
+    }
+  }
+
+  val renderPath: Description => String = {
+    case Explicit(s) => s
+    case Generic(s) => s
+    case Indexed(index, of) => s"${render(of)}($index)"
+    case AccessChain(elements @ _*) => elements.map(renderPath).mkString("/")
+    case SelfReference => ""
+    case _ => ""
+  }
+
+  val renderPathOption: Description => Option[String] = {
+    case Empty => None
+    case nonEmpty: Description => Some(renderPath(nonEmpty))
+  }
 }
 
 object Validation extends Validation {
+
+  case class ConstraintViolation(path: String, constraint: String)
+
+  implicit class AsDescription(val optional: Option[String]) extends AnyVal {
+    def asDescription: Description = optional.fold[Description](Empty)(Explicit)
+  }
 
   def forAll[T](all: Validator[T]*): Validator[T] = new Validator[T] {
     override def apply(x: T): Result = validateAll(x, all: _*)

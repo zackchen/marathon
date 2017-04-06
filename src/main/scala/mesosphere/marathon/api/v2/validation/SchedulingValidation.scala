@@ -53,8 +53,8 @@ trait SchedulingValidation {
   val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import mesosphere.marathon.raml.ConstraintOperator._
     override def apply(c: Constraint): Result = {
-      def failure(constraintViolation: String, description: Option[String] = None) =
-        Failure(Set(RuleViolation(c, constraintViolation, description)))
+      def failure(constraintViolation: String, message: Option[String] = None) =
+        Failure(Set(RuleViolation(c, constraintViolation, message.asDescription)))
       if (c.fieldName.isEmpty) {
         failure(ConstraintRequiresField)
       } else {
@@ -102,11 +102,11 @@ trait SchedulingValidation {
   }
 
   val complyWithAppConstraintRules: Validator[Seq[String]] = new Validator[Seq[String]] {
-    def failureIllegalOperator(c: Any) = Failure(Set(RuleViolation(c, ConstraintOperatorInvalid, None)))
+    def failureIllegalOperator(c: Any) = Failure(Set(RuleViolation(c, ConstraintOperatorInvalid)))
 
     override def apply(c: Seq[String]): Result = {
-      def badConstraint(reason: String, desc: Option[String] = None): Result =
-        Failure(Set(RuleViolation(c, reason, desc)))
+      def badConstraint(reason: String, message: Option[String] = None): Result =
+        Failure(Set(RuleViolation(c, reason, message.asDescription)))
       if (c.length < 2 || c.length > 3) badConstraint("Each constraint must have either 2 or 3 fields")
       else (c.headOption, c.lift(1), c.lift(2)) match {
         case (None, None, _) =>

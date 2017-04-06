@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package api.v2.json
 
-import com.wix.accord._
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.{ AppNormalization, AppsResource }
 import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference }
@@ -21,7 +20,7 @@ import scala.concurrent.duration._
 
 class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
-  val validAppDefinition = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
+  implicit val validAppDefinition = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
     AppsResource.appNormalization(
@@ -35,14 +34,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
   "AppDefinition" should {
     "Validation" in {
-      def shouldViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
-        validate(app) should containViolation(path, template)
-      }
-
-      def shouldNotViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
-        validate(app) shouldNot containViolation(path, template)
-      }
-
       var app = AppDefinition(id = "a b".toRootPath)
       val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
       MarathonTestHelper.validateJsonSchema(app, false)

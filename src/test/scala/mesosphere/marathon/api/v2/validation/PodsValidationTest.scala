@@ -2,52 +2,46 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.Validator
-import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
-class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
+class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValidation with SchedulingValidation {
 
   "A pod definition" should {
 
     "be rejected if the id is empty" in new Fixture {
-      private val invalid = validPod.copy(id = "/")
-      validator(invalid) should failWith("id" -> "Path must contain at least one path element")
+      shouldViolate(validPod.copy(id = "/"), "/id", "Path must contain at least one path element")
     }
 
     "be rejected if the id is not absolute" in new Fixture {
-      private val invalid = validPod.copy(id = "some/foo")
-      validator(invalid) should failWith("id" -> "Path needs to be absolute")
+      shouldViolate(validPod.copy(id = "some/foo"), "/id", "Path needs to be absolute")
     }
 
     "be rejected if a defined user is empty" in new Fixture {
-      private val invalid = validPod.copy(user = Some(""))
-      validator(invalid) should failWith("user" -> "must not be empty")
+      shouldViolate(validPod.copy(user = Some("")), "/user", "must not be empty")
     }
 
     "be rejected if no container is defined" in new Fixture {
-      private val invalid = validPod.copy(containers = Seq.empty)
-      validator(invalid) should failWith("containers" -> "must not be empty")
+      shouldViolate(validPod.copy(containers = Seq.empty), "/containers", "must not be empty")
     }
 
     "be rejected if container names are not unique" in new Fixture {
-      private val invalid = validPod.copy(containers = Seq(validContainer, validContainer))
-      validator(invalid) should failWith("containers" -> PodsValidationMessages.ContainerNamesMustBeUnique)
+      shouldViolate(validPod.copy(containers = Seq(validContainer, validContainer)), "/containers", PodsValidationMessages.ContainerNamesMustBeUnique)
     }
 
     "be rejected if endpoint names are not unique" in new Fixture {
       val endpoint1 = Endpoint("endpoint", hostPort = Some(123))
       val endpoint2 = Endpoint("endpoint", hostPort = Some(124))
       private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
-      validator(invalid) should failWith("value" -> PodsValidationMessages.EndpointNamesMustBeUnique)
+      shouldViolate(invalid, "/", PodsValidationMessages.EndpointNamesMustBeUnique)
     }
 
     "be rejected if endpoint host ports are not unique" in new Fixture {
       val endpoint1 = Endpoint("endpoint1", hostPort = Some(123))
       val endpoint2 = Endpoint("endpoint2", hostPort = Some(123))
       private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
-      validator(invalid) should failWith("value" -> PodsValidationMessages.HostPortsMustBeUnique)
+      shouldViolate(invalid, "/", PodsValidationMessages.HostPortsMustBeUnique)
     }
 
     "be rejected if endpoint container ports are not unique" in new Fixture {
@@ -57,7 +51,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         networks = Seq(Network(mode = NetworkMode.Container)),
         containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2)))
       )
-      validator(invalid) should failWith("value" -> PodsValidationMessages.ContainerPortsMustBeUnique)
+      shouldViolate(invalid, "/", PodsValidationMessages.ContainerPortsMustBeUnique)
     }
 
     "be rejected if volume names are not unique" in new Fixture {
@@ -67,7 +61,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         volumes = Seq(volume, volume),
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
-      validator(invalid) should failWith("volumes" -> PodsValidationMessages.VolumeNamesMustBeUnique)
+      shouldViolate(invalid, "/volumes", PodsValidationMessages.VolumeNamesMustBeUnique)
     }
   }
 
@@ -92,7 +86,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
       containers = Seq(validContainer),
       networks = Seq(Network(mode = NetworkMode.Host))
     )
-    val validator: Validator[Pod] = podDefValidator(Set.empty, SemanticVersion.zero)
+    implicit val validator: Validator[Pod] = podDefValidator(Set.empty, SemanticVersion.zero)
   }
 
   "network validation" when {

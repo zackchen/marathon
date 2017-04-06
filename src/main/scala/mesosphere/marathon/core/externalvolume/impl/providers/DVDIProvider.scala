@@ -141,7 +141,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         val conflicts = volumeNameCounts(app).filter { case (volumeName, number) => number > 1 }.keys
         group(
           conflicts.toSet[String].map { e =>
-            RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}", None)
+            RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}")
           }
         )
       }
@@ -204,7 +204,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         val conflicts = volumeNameCounts(app).filter { case (volumeName, number) => number > 1 }.keys
         group(
           conflicts.toSet[String].map { e =>
-            RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}", None)
+            RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}")
           }
         )
       }

@@ -8,11 +8,12 @@ import akka.testkit.{ TestActor, TestActorRef, TestKitBase }
 import akka.util.Timeout
 import com.typesafe.config.{ Config, ConfigFactory }
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.{ Failure, Result, Success }
+import com.wix.accord.{ Failure, Result, Success, Validator }
 import kamon.Kamon
 import mesosphere.marathon.Normalization
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
 import org.scalatest.matchers.{ Matcher, MatchResult }
 import org.scalatest._
@@ -49,7 +50,7 @@ trait ValidationTestLike extends Validation {
 
   protected implicit val normalizeResult: Normalization[Result] = Normalization {
     // normalize failures => human readable error messages
-    case f: Failure => Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
+    case f: Failure => f
     case x => x
   }
 
@@ -79,6 +80,39 @@ trait ValidationTestLike extends Validation {
           s"Violations:\n${violations.mkString("\n")} did not contain ${path} -> ${message}",
           s"Violation contains ${path} -> ${message}"
         )
+
+  def shouldViolate[T](entity: T, path: String, constraint: String)(implicit validator: Validator[T]): Failure = {
+    validator(entity) match {
+      case Success => fail(s"expected failure '$constraint'")
+      case f: Failure =>
+        val violations = Validation.allViolations(f)
+        val haveMatch = violations.exists { v => v.path.startsWith(path) && v.constraint.contains(constraint) }
+        def description(c: ConstraintViolation): String = s"path: ${c.path} constraint:${c.constraint}"
+        assert(haveMatch, s"No violation matched constraint:$constraint on path:$path\nGot violations:\n${violations.map(description).mkString("\n")}")
+        f
+    }
+  }
+
+  def shouldSucceed[T](entity: T)(implicit validator: Validator[T]): Result = {
+    validator(entity) match {
+      case Success => Success
+      case f: Failure =>
+        val violations = Validation.allViolations(f)
+        fail(s"Violations:\n${violations.mkString}")
+    }
+  }
+  def shouldNotViolate[T](entity: T, path: String, template: String)(implicit validator: Validator[T]): Result = {
+    validator(entity) match {
+      case Success => Success
+      case f: Failure =>
+        val violations = Validation.allViolations(f)
+        assert(
+          !violations.exists { v =>
+            v.path == path && v.constraint == template
+          },
+          s"Violations:\n${violations.mkString}"
+        )
+        f
     }
   }
 }
