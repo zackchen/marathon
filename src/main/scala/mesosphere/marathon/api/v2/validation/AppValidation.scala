@@ -3,7 +3,7 @@ package api.v2.validation
 
 import java.util.regex.Pattern
 
-import com.wix.accord.Descriptions.Explicit
+import com.wix.accord.Descriptions.Generic
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
@@ -185,7 +185,7 @@ trait AppValidation {
               Try(Protos.Constraint.Operator.valueOf(op)).toOption.map {
                 case LIKE | UNLIKE =>
                   Try(Pattern.compile(value)).toOption.map(_ => Success).getOrElse(
-                    Failure(Set(RuleViolation(c, "Invalid regular expression", Explicit(value))))
+                    Failure(Set(RuleViolation(c, "Invalid regular expression", Generic(value))))
                   )
                 case _ =>
                   Failure(Set(

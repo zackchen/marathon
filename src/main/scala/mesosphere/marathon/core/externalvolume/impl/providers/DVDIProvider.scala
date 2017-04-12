@@ -253,18 +253,12 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   }
 
   object VolumeOptions {
-    def optionalOption(options: Map[String, String], optionValidator: Validator[String]): Validator[String] =
-      validator[String] { optionName => options.get(optionName) is optional(optionValidator) }
 
-    val validRexRayOptions: Validator[Map[String, String]] = {
-      mapDescription(description => s"($description)") {
-        validator[Map[String, String]] { opts =>
-          "dvdi/volumetype" is optionalOption(opts, validLabel)
-          "dvdi/newfstype" is optionalOption(opts, validLabel)
-          "dvdi/iops" is optionalOption(opts, validNaturalNumber)
-          "dvdi/overwritefs" is optionalOption(opts, validBoolean)
-        }
-      }
+    val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
+      opts.get("dvdi/volumetype") as "dvdi/volumetype" is optional(validLabel)
+      opts.get("dvdi/newfstype") as "dvdi/newfstype" is optional(validLabel)
+      opts.get("dvdi/iops") as "dvdi/iops" is optional(validNaturalNumber)
+      opts.get("dvdi/overwritefs") as "dvdi/overwritefs" is optional(validBoolean)
     }
   }
 

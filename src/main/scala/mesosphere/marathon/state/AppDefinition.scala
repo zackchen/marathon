@@ -541,7 +541,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
-    appDef.container.each is valid(Container.validContainer(appDef.networks, enabledFeatures))
+    appDef.container is optional(Container.validContainer(appDef.networks, enabledFeatures))
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef must containsCmdArgsOrContainer

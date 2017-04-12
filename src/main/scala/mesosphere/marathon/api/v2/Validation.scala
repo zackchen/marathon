@@ -57,28 +57,39 @@ trait Validation {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
         seq.zipWithIndex.foldLeft[Result](Success) {
-          case (result, (item, index)) => result.and(validator(item).applyDescription(Indexed(index.toLong)))
+          case (result, (item, index)) =>
+            validator(item) match {
+              case Success => result
+              case Failure(violations) => result.and(Failure(violations.map(mapViolation(_, Indexed(index.toLong)))))
+            }
         }
       }
     }
   }
 
-  def mapDescription[T](change: String => String)(wrapped: Validator[T]): Validator[T] = new Validator[T] {
-    override def apply(value: T): Result = {
-      wrapped(value) match {
-        case Success => Success
-        case f: Failure =>
-          Failure(
-            f.violations.map { v =>
-              v.description match {
-                case Generic(s) => v.applyDescription(Generic(change(s)))
-                case Explicit(s) => v.applyDescription(Explicit(change(s)))
-                case _ => v
-              }
-            }
-          )
-      }
+  private[this] def mapViolation(violation: Violation, desc: Description): Violation = {
+    violation match {
+      case RuleViolation(value, constraint, description) => RuleViolation(value, constraint, combine(description, desc))
+      case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children.map(mapViolation(_, desc)), combine(description, desc))
     }
+  }
+  private[this] val combine: ((Description, Description) => Description) = {
+    case (Empty, rhs) => rhs
+    case (SelfReference, rhs: AccessChain) => rhs
+    case (Indexed(index, Empty), rhs) => Indexed(index, rhs)
+    case (lhs: Explicit, AccessChain(ind @ _*)) => AccessChain(ind :+ lhs: _*)
+    case (lhs: Generic, AccessChain(ind @ _*)) => AccessChain(ind :+ lhs: _*)
+    case (lhs @ Indexed(_, of), AccessChain(ind @ _*)) if of != Empty => AccessChain(ind :+ lhs: _*)
+    case (AccessChain(rhs @ _*), ind @ Indexed(_, Empty)) => AccessChain(ind +: rhs: _*)
+    case (AccessChain(ind @ Indexed(_, Empty), tail @ _*), rhs) => AccessChain(ind.copy(of = rhs) +: tail: _*)
+    case (AccessChain(inner @ _*), AccessChain(outer @ _*)) => AccessChain(outer ++ inner: _*)
+
+    //added by me
+    case (SelfReference, Indexed(index, Empty)) => Indexed(index, SelfReference)
+    case (Indexed(index, SelfReference), rhs) => Indexed(index, rhs)
+
+    case (lhs, rhs) =>
+      throw new IllegalArgumentException(s"Cannot combine description '$lhs' with '$rhs'")
   }
 
   def featureEnabled[T](enabledFeatures: Set[String], feature: String): Validator[T] = {
@@ -254,6 +265,7 @@ trait Validation {
       (parent, child) match {
         case (Empty | SelfReference, rhs) => renderPath(rhs)
         case (lhs, Empty | SelfReference) => renderPath(lhs)
+        case (lhs, Indexed(index, Empty | SelfReference)) => renderPath(lhs) + s"($index)"
         case (lhs, rhs) => renderPath(lhs) + "/" + renderPath(rhs)
       }
     }

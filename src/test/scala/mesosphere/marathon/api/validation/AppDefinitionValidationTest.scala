@@ -57,7 +57,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
           dependencies = Set(PathId("/a/.../"))
         )
 
-        shouldViolate(app, "/dependencies", "is invalid")
+        shouldViolate(app, "/dependencies(0)", """must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])|(\.|\.\.)$'""")
       }
     }
 
