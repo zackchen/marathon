@@ -241,3 +241,105 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     run, data = shakedown.run_command_on_master(cmd)
     assert run, 'Failed to validate backup file {}'.format(backup_url)
     assert int(data.rstrip()) > 0, "Backup file is empty"
+
+
+@pytest.mark.skip(reason="Not yet implemented in mesos")
+def test_app_secret_volume(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not is_enterprise_cli_package_installed():
+        install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+
+    app_id = '{}/{}'.format(secret_name, uuid.uuid4().hex)
+    app_def = {
+        "id": app_id,
+        "instances": 1,
+        "cpus": 0.1,
+        "mem": 64,
+        "cmd": "/opt/mesosphere/bin/python -m http.server $PORT_API",
+        "container": {
+            "type": "MESOS",
+            "volumes": [{
+                "secret": {
+                    "source": secret_name
+                }
+            }]
+        },
+        "portDefinitions": [{
+            "port": 0,
+            "protocol": "tcp",
+            "name": "api",
+            "labels": {}
+        }]
+    }
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    assert len(tasks) == 1
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
+    cmd = "curl {}:{}/.secrets{}".format(host, port, secret_name)
+    run, data = shakedown.run_command_on_master(cmd)
+
+    assert run, "{} did not succeed".format(cmd)
+    assert data == secret_value
+
+
+def test_app_secret_env_var(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not is_enterprise_cli_package_installed():
+        install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+
+    app_id = '{}/{}'.format(secret_name, uuid.uuid4().hex)
+    app_def = {
+        "id": app_id,
+        "instances": 1,
+        "cpus": 0.1,
+        "mem": 64,
+        "cmd": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret/env && /opt/mesosphere/bin/python -m http.server $PORT_API",
+        "env": {
+            "SECRET_ENV": {
+                "secret": {
+                    "source": secret_name
+                }
+            }
+        },
+        "portDefinitions": [{
+            "port": 0,
+            "protocol": "tcp",
+            "name": "api",
+            "labels": {}
+        }]
+    }
+
+    client = marathon.create_client()
+    client.add_app(app_def)
+    shakedown.deployment_wait()
+
+    tasks = client.get_tasks(app_id)
+    assert len(tasks) == 1
+
+    port = tasks[0]['ports'][0]
+    host = tasks[0]['host']
+    cmd = "curl {}:{}/secret/env".format(host, port)
+    run, data = shakedown.run_command_on_master(cmd)
+
+    assert run, "{} did not succeed".format(cmd)
+    assert data == secret_value
+
+
+@pytest.fixture(scope="function")
+def secret_fixture():
+    secret_name = '/path/to/secret'
+    secret_value = 'super_secret_password'
+    common.create_secret(secret_name, secret_value)
+    yield secret_name, secret_value
+    common.delete_secret(secret_name)
