@@ -15,47 +15,12 @@ import org.apache.mesos.{ Protos => Mesos }
 
 import scala.util.Try
 
-sealed trait Volume {
-  def containerPath: String
-  def mode: Mesos.Volume.Mode
+sealed trait Volume extends plugin.AppVolumeSpec {
+  val containerPath: String
+  val mode: Mesos.Volume.Mode
 }
 
 object Volume {
-  def apply(
-    containerPath: String,
-    hostPath: Option[String],
-    mode: Mesos.Volume.Mode,
-    persistent: Option[PersistentVolumeInfo],
-    external: Option[ExternalVolumeInfo]): Volume = {
-
-    persistent match {
-      case Some(persistentVolumeInfo) =>
-        if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-        if (external.isDefined) throw new IllegalArgumentException("external may not be set with persistent")
-        PersistentVolume(
-          containerPath = containerPath,
-          persistent = persistentVolumeInfo,
-          mode = mode
-        )
-      case None =>
-        external match {
-          case Some(externalVolumeInfo) =>
-            if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
-            ExternalVolume(
-              containerPath = containerPath,
-              external = externalVolumeInfo,
-              mode = mode
-            )
-          case None =>
-            DockerVolume(
-              containerPath = containerPath,
-              hostPath = hostPath.getOrElse(""),
-              mode = mode
-            )
-        }
-    }
-  }
-
   def apply(proto: Protos.Volume): Volume = {
     if (proto.hasPersistent)
       PersistentVolume(
@@ -370,3 +335,7 @@ object ExternalVolume {
     ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
   } and ExternalVolumes.validExternalVolume
 }
+
+case class SecretVolume(
+  containerPath: String,
+  secret: Secret) extends plugin.AppSecretVolumeSpec // No need for extra validation - secret validation already covers it
