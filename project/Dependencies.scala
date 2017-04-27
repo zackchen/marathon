@@ -104,7 +104,7 @@ object Dependency {
     val MarathonApiConsole = "3.0.8"
     val Logback = "1.1.3"
     val Logstash = "4.8"
-    val WixAccord = "0.6.1"
+    val WixAccord = "0.7-SNAPSHOT"
     val Curator = "2.11.1"
     val Java8Compat = "0.8.0"
     val ScalaLogging = "3.5.0"
