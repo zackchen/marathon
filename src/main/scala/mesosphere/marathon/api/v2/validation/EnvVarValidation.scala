@@ -47,7 +47,7 @@ trait EnvVarValidation {
         } == 0
       else true
     },
-    every(SecretValidation.secretRefValidator(secrets.map(v => v._1 -> EnvVarSecret(v._2))))
+    every(SecretValidation.secretValidator(secrets.map(v => v._1 -> EnvVarSecret(v._2))))
   )
 }
 
@@ -55,5 +55,5 @@ object EnvVarValidation extends EnvVarValidation
 
 object EnvVarValidationMessages {
   val MustContainOnlyAlphanumeric = "must contain only alphanumeric chars or underscore, must not begin with a number, and must be 254 chars or less"
-  val UseOfSecretRefsRequiresSecretFeature = "use of secret-references in the environment requires the secrets feature to be enabled"
+  val UseOfSecretRefsRequiresSecretFeature = "use of secrets and secret-references in the environment requires the secrets feature to be enabled"
 }
