@@ -343,7 +343,6 @@ object ExternalVolume {
 case class SecretVolume(
     containerPath: String,
     secret: Secret) extends Volume with AppSecretVolumeSpec {
-  // No need for extra validation - secret validation already covers it
   override val mode: Mesos.Volume.Mode = Mesos.Volume.Mode.RO
 }
 

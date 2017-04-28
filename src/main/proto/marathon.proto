@@ -344,6 +344,11 @@ message Volume {
     repeated mesos.Label options = 4;
   }
 
+  // Defining properties of secret volumes
+  message SecretVolumeInfo {
+    required string source = 1;
+  }
+
   required mesos.Volume.Mode mode = 3;
 
   // Path pointing to a directory or file in the container. If the
@@ -369,8 +374,8 @@ message Volume {
   // Defines an External Volume; implies no hostPath or persistent.
   optional ExternalVolumeInfo external = 6;
 
-  // Defines a source for a secret; implies no hostPath, persistent or external.
-  optional string secret_source = 7;
+  // Defines a SecretVolume; implies no hostPath, persistent or external.
+  optional SecretVolumeInfo secret = 7;
 }
 
 message StorageVersion {

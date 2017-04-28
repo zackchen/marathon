@@ -145,7 +145,9 @@ object VolumeSerializer {
     case s: SecretVolume =>
       Protos.Volume.newBuilder()
         .setContainerPath(s.containerPath)
-        .setSecretSource(s.secret.source)
+        .setSecret(
+          Protos.Volume.SecretVolumeInfo.newBuilder().setSource(s.secret.source).build()
+        )
         .setMode(s.mode)
         .build()
   }
