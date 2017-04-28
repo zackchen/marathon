@@ -32916,7 +32916,7 @@ public final class Protos {
 
       private void initFields() {
         size_ = 0L;
-        type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.UNKNOWN;
+        type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
         constraints_ = java.util.Collections.emptyList();
         maxSize_ = 0L;
       }
@@ -33102,7 +33102,7 @@ public final class Protos {
           super.clear();
           size_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000001);
-          type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.UNKNOWN;
+          type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
           bitField0_ = (bitField0_ & ~0x00000002);
           if (constraintsBuilder_ == null) {
             constraints_ = java.util.Collections.emptyList();
@@ -33283,7 +33283,7 @@ public final class Protos {
         }
 
         // optional .mesos.Resource.DiskInfo.Source.Type type = 2;
-        private org.apache.mesos.Protos.Resource.DiskInfo.Source.Type type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.UNKNOWN;
+        private org.apache.mesos.Protos.Resource.DiskInfo.Source.Type type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
         /**
          * <code>optional .mesos.Resource.DiskInfo.Source.Type type = 2;</code>
          */
@@ -33313,7 +33313,7 @@ public final class Protos {
          */
         public Builder clearType() {
           bitField0_ = (bitField0_ & ~0x00000002);
-          type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.UNKNOWN;
+          type_ = org.apache.mesos.Protos.Resource.DiskInfo.Source.Type.PATH;
           onChanged();
           return this;
         }

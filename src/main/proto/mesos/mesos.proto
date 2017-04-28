@@ -994,7 +994,7 @@ message Resource {
     // TODO(jmlvanre): Add support for BLOCK devices.
     message Source {
       enum Type {
-        UNKNOWN = 0;
+//        UNKNOWN = 0; // TODO adju reenable
         PATH = 1;
         MOUNT = 2;
       }
