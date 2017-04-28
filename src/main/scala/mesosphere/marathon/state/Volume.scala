@@ -8,6 +8,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.plugin.AppSecretVolumeSpec
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Volume.Mode
@@ -42,15 +43,17 @@ object Volume {
       )
   }
 
-  type TupleV = (String, Option[String], Mesos.Volume.Mode, Option[PersistentVolumeInfo], Option[ExternalVolumeInfo])
+  type TupleV = (String, Option[String], Mesos.Volume.Mode, Option[PersistentVolumeInfo], Option[ExternalVolumeInfo], Option[SecretVolume])
   def unapply(volume: Volume): Option[TupleV] =
     volume match {
       case persistentVolume: PersistentVolume =>
-        Some((persistentVolume.containerPath, None, persistentVolume.mode, Some(persistentVolume.persistent), None))
+        Some((persistentVolume.containerPath, None, persistentVolume.mode, Some(persistentVolume.persistent), None, None))
       case ev: ExternalVolume =>
-        Some((ev.containerPath, None, ev.mode, None, Some(ev.external)))
+        Some((ev.containerPath, None, ev.mode, None, Some(ev.external), None))
       case dockerVolume: DockerVolume =>
-        Some((dockerVolume.containerPath, Some(dockerVolume.hostPath), dockerVolume.mode, None, None))
+        Some((dockerVolume.containerPath, Some(dockerVolume.hostPath), dockerVolume.mode, None, None, None))
+      case secretVolume: SecretVolume =>
+        Some((secretVolume.containerPath, None, secretVolume.mode, None, None, Some(SecretVolume(secretVolume.containerPath, secretVolume.secret))))
     }
 
   def validVolume(enabledFeatures: Set[String]): Validator[Volume] = new Validator[Volume] {
@@ -58,6 +61,7 @@ object Volume {
       case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
       case dv: DockerVolume => validate(dv)(DockerVolume.validDockerVolume)
       case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
+      case sv: SecretVolume => validate(sv)(SecretVolume.validSecretVolume(enabledFeatures))
     }
   }
 }
@@ -337,5 +341,15 @@ object ExternalVolume {
 }
 
 case class SecretVolume(
-  containerPath: String,
-  secret: Secret) extends plugin.AppSecretVolumeSpec // No need for extra validation - secret validation already covers it
+    containerPath: String,
+    secret: Secret) extends Volume with AppSecretVolumeSpec {
+  // No need for extra validation - secret validation already covers it
+  override val mode: Mesos.Volume.Mode = Mesos.Volume.Mode.RO
+}
+
+object SecretVolume {
+  def validSecretVolume(enabledFeatures: Set[String]): Validator[SecretVolume] = validator[SecretVolume] { ev =>
+    ev is featureEnabled(enabledFeatures, Features.SECRETS)
+    ev.containerPath is notEmpty
+  }
+}

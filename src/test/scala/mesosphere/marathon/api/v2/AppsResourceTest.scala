@@ -14,7 +14,7 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
-import mesosphere.marathon.raml.{ App, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
+import mesosphere.marathon.raml.{ App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkConversionMessages, NetworkMode, Raml, SecretDef }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -579,7 +579,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("references an undefined secret")
     }
 
-    "Create the secrets feature is NOT enabled an app (that uses secrets) fails" in new Fixture(configArgs = Seq()) {
+    "Create the secrets feature is NOT enabled an app (that uses secret refs) fails" in new Fixture(configArgs = Seq()) {
       Given("The secrets feature is NOT enabled")
 
       config.isFeatureSet(Features.SECRETS) should be(false)
@@ -597,6 +597,47 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       Then("It fails")
       response.getStatus should be(422)
       response.getEntity.toString should include("Feature secrets is not enabled")
+    }
+
+    "Create the secrets feature is NOT enabled an app (that uses secret defs) fails" in new Fixture(configArgs = Seq()) {
+      Given("The secrets feature is NOT enabled")
+
+      config.isFeatureSet(Features.SECRETS) should be(false)
+
+      And("An app with an envvar secret-def")
+      val app = App(id = "/app", cmd = Some("cmd"),
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.SecretDef("foo"))))
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It fails")
+      response.getStatus should be(422)
+      response.getEntity.toString should include("requires the secrets feature to be enabled")
+    }
+
+    "Create the secrets feature is NOT enabled an app (that uses file base secrets) fails" in new Fixture(configArgs = Seq()) {
+      Given("The secrets feature is NOT enabled")
+
+      config.isFeatureSet(Features.SECRETS) should be(false)
+
+      And("An app with an envvar secret-def")
+      val secretVolume = AppSecretVolume(SecretDef("/bar"))
+      val containers = raml.Container(`type` = EngineType.Mesos, volumes = Seq(secretVolume))
+      val app = App(id = "/app", cmd = Some("cmd"),
+        container = Option(containers)
+      )
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It fails")
+      response.getStatus should be(422)
+      response.getEntity.toString should include("Feature secrets is not enabled.")
     }
 
     "Create a new app fails with Validation errors for negative resources" in new Fixture {

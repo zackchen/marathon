@@ -16,7 +16,7 @@ trait SecretValidation {
       case EnvVarValue(value: String) => value // this should never be called; if it is, validation output will not be friendly
     }
 
-  def secretRefValidator(secrets: Map[String, EnvVarSecret]) = validator[(String, EnvVarValueOrSecret)] { entry =>
+  def secretValidator(secrets: Map[String, EnvVarSecret]) = validator[(String, EnvVarValueOrSecret)] { entry =>
     entry._2 as stringify(entry._2) is isTrue("references an undefined secret"){
       case EnvVarSecret(ref: EnvVarSecretRef) => secrets.contains(ref.value)
       case EnvVarSecret(secretDef: SecretDef) => true

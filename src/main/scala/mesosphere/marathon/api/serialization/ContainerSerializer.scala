@@ -84,6 +84,7 @@ object ContainerSerializer {
       case _: PersistentVolume => // PersistentVolumes are handled differently
       case ev: ExternalVolume => ExternalVolumes.build(builder, ev) // this also adds the volume
       case dv: DockerVolume => builder.addVolumes(VolumeSerializer.toMesos(dv))
+      case sv: SecretVolume => // SecretVolumes are handled differently
     }
 
     // only UCR containers have NetworkInfo's generated this way
@@ -139,6 +140,13 @@ object VolumeSerializer {
         .setContainerPath(d.containerPath)
         .setHostPath(d.hostPath)
         .setMode(d.mode)
+        .build()
+
+    case s: SecretVolume =>
+      Protos.Volume.newBuilder()
+        .setContainerPath(s.containerPath)
+        .setSecretSource(s.secret.source)
+        .setMode(s.mode)
         .build()
   }
 

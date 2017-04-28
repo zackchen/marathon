@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.pod.{ EphemeralVolume, HostVolume, Volume => PodVolume }
-import mesosphere.marathon.state.{ DiskType, ExternalVolumeInfo, PersistentVolumeInfo }
+import mesosphere.marathon.state.{ DiskType, ExternalVolumeInfo, PersistentVolumeInfo, Secret, SecretVolume }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{ Protos => Mesos }
@@ -59,6 +59,9 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         volume.containerPath,
         persistent = pv.persistent.toRaml,
         mode = volume.mode.toRaml)
+      case sv: state.SecretVolume => AppSecretVolume(
+        secret = SecretDef(sv.secret.source)
+      )
     }
   }
 
@@ -113,7 +116,9 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     state.DockerVolume(containerPath = vol.containerPath, hostPath = vol.hostPath.getOrElse(""), mode = vol.mode.fromRaml)
   }
 
-  implicit val volumeSecretReads: Reads[AppSecretVolume, state.Volume] = Reads { vol => ??? } // TODO adju implement
+  implicit val volumeSecretReads: Reads[AppSecretVolume, state.Volume] = Reads { vol =>
+    SecretVolume(vol.secret.source, Secret(vol.secret.source)) // TODO adju adapt container path
+  }
 
   implicit val appVolumeExternalProtoRamlWriter: Writes[Protos.Volume.ExternalVolumeInfo, ExternalVolume] = Writes { vol =>
     ExternalVolume(
