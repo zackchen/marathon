@@ -90,7 +90,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
   }
 
   "network validation" when {
-    val validator: Validator[Pod] = podDefValidator(Set.empty, SemanticVersion.zero)
+    implicit val validator: Validator[Pod] = podDefValidator(Set.empty, SemanticVersion.zero)
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint] = Nil) =
       PodContainer(
@@ -118,7 +118,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         val app = containerNetworkedPod(
           Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80))))),
           networkCount = 2)
-        validator(app) shouldBe (aSuccess)
+        shouldSucceed(app)
       }
 
       "allow portMappings that both declare a hostPort and a networkNames" in {
@@ -130,92 +130,93 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
               containerPort = Some(80),
               networkNames = List("1"))))),
           networkCount = 2)
-        validator(app) shouldBe (aSuccess)
+        shouldSucceed(app)
       }
     }
 
     "single container network" should {
 
       "consider a valid portMapping with a networkNames as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = Some(80),
-                containerPort = Some(80),
-                networkNames = List("1"))))))) shouldBe (aSuccess)
+        val pod = containerNetworkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              hostPort = Some(80),
+              containerPort = Some(80),
+              networkNames = List("1"))))))
+        shouldSucceed(pod)
       }
 
       "consider a portMapping with a host port and two valid networkNames as invalid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = Some(80),
-                containerPort = Some(80),
-                networkNames = List("1", "2"))))))) shouldBe (aFailure)
+        val pod = containerNetworkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              hostPort = Some(80),
+              containerPort = Some(80),
+              networkNames = List("1", "2"))))))
+        shouldSucceed(pod)
       }
 
       "consider a portMapping with no networkNames as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = Some(80),
-                containerPort = Some(80),
-                networkNames = Nil)))))) shouldBe (aSuccess)
+        val pod = containerNetworkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              hostPort = Some(80),
+              containerPort = Some(80),
+              networkNames = Nil)))))
+        shouldSucceed(pod)
       }
 
       "maybe consider a portMapping without hostport as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                hostPort = None,
-                containerPort = Some(80),
-                networkNames = Nil)))))) shouldBe (aSuccess)
+        val pod = containerNetworkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              hostPort = None,
+              containerPort = Some(80),
+              networkNames = Nil)))))
+        shouldSucceed(pod)
       }
 
       "consider portMapping with zero hostport as valid" in {
-        validator(
+        val pod =
           containerNetworkedPod(Seq(
             podContainer(endpoints = Seq(
               Endpoint(
                 "endpoint",
                 containerPort = Some(80),
-                hostPort = Some(0))))))) shouldBe (aSuccess)
+                hostPort = Some(0))))))
+        shouldSucceed(pod)
       }
 
       "consider portMapping with a non-matching network name as invalid" in {
-        val result = validator(
+        val pod =
           containerNetworkedPod(Seq(
             podContainer(endpoints = Seq(
               Endpoint(
                 "endpoint",
                 containerPort = Some(80),
                 hostPort = Some(80),
-                networkNames = List("invalid-network-name")))))))
-        result.isFailure shouldBe true
+                networkNames = List("invalid-network-name"))))))
+        shouldViolate(pod, "", "")
       }
 
       "consider portMapping without networkNames nor hostPort as valid" in {
-        validator(
-          containerNetworkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "endpoint",
-                containerPort = Some(80),
-                hostPort = None,
-                networkNames = Nil)))))) shouldBe (aSuccess)
+        val pod = containerNetworkedPod(Seq(
+          podContainer(endpoints = Seq(
+            Endpoint(
+              "endpoint",
+              containerPort = Some(80),
+              hostPort = None,
+              networkNames = Nil)))))
+        shouldSucceed(pod)
       }
     }
 
     "require that hostPort is unique" in {
-      val result = validator(
+      val pod =
         containerNetworkedPod(Seq(
           podContainer(endpoints = Seq(
             Endpoint(
@@ -223,14 +224,11 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
               hostPort = Some(123)),
             Endpoint(
               "name",
-              hostPort = Some(123)))))))
+              hostPort = Some(123))))))
 
-      result should containViolation(
-        "/containers(0)/endpoints(0)/containerPort" -> "is required when using container-mode networking")
-      result should containViolation(
-        "/" -> PodsValidationMessages.EndpointNamesMustBeUnique)
-      result should containViolation(
-        "/" -> PodsValidationMessages.HostPortsMustBeUnique)
+      shouldViolate(pod, "/containers(0)/endpoints(0)/containerPort", "is required when using container-mode networking")
+      shouldViolate(pod, "/", PodsValidationMessages.EndpointNamesMustBeUnique)
+      shouldViolate(pod, "/", PodsValidationMessages.HostPortsMustBeUnique)
     }
   }
 }

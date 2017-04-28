@@ -1,11 +1,14 @@
 package mesosphere.marathon
 package api.v2.validation
 
+import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.{ UnitTest, ValidationTestLike }
 import mesosphere.marathon.raml._
 import mesosphere.UnitTest
 
-class AppValidationTest extends UnitTest with ValidationTestLike {
+class AppValidationTest extends UnitTest with ResultMatchers with ValidationTestLike {
+
+  import Normalization._
 
   "network validation" when {
     implicit val basicValidator = AppValidation.validateCanonicalAppAPI(Set.empty)

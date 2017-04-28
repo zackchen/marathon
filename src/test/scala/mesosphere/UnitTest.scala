@@ -75,11 +75,13 @@ trait ValidationTestLike extends Validation {
 
         MatchResult(
           violations.exists { v =>
-            v.path.contains(path) && v.message == message
+            v.path.contains(path) && v.constraint == message
           },
           s"Violations:\n${violations.mkString("\n")} did not contain ${path} -> ${message}",
           s"Violation contains ${path} -> ${message}"
         )
+    }
+  }
 
   def shouldViolate[T](entity: T, path: String, constraint: String)(implicit validator: Validator[T]): Failure = {
     validator(entity) match {

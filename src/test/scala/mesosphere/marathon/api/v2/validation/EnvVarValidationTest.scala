@@ -43,7 +43,7 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
           if (strictNameValidation) {
             shouldViolate(Wrapper(Environment(name -> "x")), s"/env($name)", MustContainOnlyAlphanumeric)
           } else {
-            shouldNotViolate(Wrapper(Environment(name -> "x")))
+            shouldSucceed(Wrapper(Environment(name -> "x")))
           }
         }
       }

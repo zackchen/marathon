@@ -73,6 +73,8 @@ trait Validation {
       case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children.map(mapViolation(_, desc)), combine(description, desc))
     }
   }
+
+  /*
   private[this] val combine: ((Description, Description) => Description) = {
     case (Empty, rhs) => rhs
     case (SelfReference, rhs: AccessChain) => rhs
@@ -91,6 +93,7 @@ trait Validation {
     case (lhs, rhs) =>
       throw new IllegalArgumentException(s"Cannot combine description '$lhs' with '$rhs'")
   }
+  */
 
   def featureEnabled[T](enabledFeatures: Set[String], feature: String): Validator[T] = {
     isTrue(s"Feature $feature is not enabled. Enable with --enable_features $feature)") { _ =>
