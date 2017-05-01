@@ -166,7 +166,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       }
 
       val validDockerVolume = validator[AppVolume] { volume =>
-        volume.external is valid(definedAnd(validDockerExternalVolume))
+        volume.external is definedAnd(validDockerExternalVolume)
         volume.containerPath is notOneOf(DotPaths: _*)
       }
 
@@ -186,7 +186,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     validator[App] { app =>
       app should haveUniqueExternalVolumeNames
       app should haveOnlyOneInstance
-      app.container is valid(optional(validContainer))
+      app.container is optional(validContainer)
       app.upgradeStrategy is optional(SchedulingValidation.validForResidentTasks)
     }
   }
@@ -247,18 +247,18 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     validator[AppDefinition] { app =>
       app should haveUniqueExternalVolumeNames
       app should haveOnlyOneInstance
-      app.container is valid(optional(validContainer))
-      app.upgradeStrategy is valid(UpgradeStrategy.validForResidentTasks)
+      app.container is optional(validContainer)
+      app.upgradeStrategy is UpgradeStrategy.validForResidentTasks
     }
   }
 
   object VolumeOptions {
 
     val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
-      opts.get("dvdi/volumetype") as "dvdi/volumetype" is optional(validLabel)
-      opts.get("dvdi/newfstype") as "dvdi/newfstype" is optional(validLabel)
-      opts.get("dvdi/iops") as "dvdi/iops" is optional(validNaturalNumber)
-      opts.get("dvdi/overwritefs") as "dvdi/overwritefs" is optional(validBoolean)
+      opts.get("dvdi/volumetype") as "\"dvdi/volumetype\"" is optional(validLabel)
+      opts.get("dvdi/newfstype") as "\"dvdi/newfstype\"" is optional(validLabel)
+      opts.get("dvdi/iops") as "\"dvdi/iops\"" is optional(validNaturalNumber)
+      opts.get("dvdi/overwritefs") as "\"dvdi/overwritefs\"" is optional(validBoolean)
     }
   }
 
@@ -268,9 +268,9 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       v.external.name is notEmpty
       v.external.provider is equalTo(name)
 
-      v.external.options.get(driverOption) as s"external/options($quotedDriverOption)" is valid(definedAnd(validLabel))
+      v.external.options.get(driverOption) as s""""external/options($quotedDriverOption)"""" is definedAnd(validLabel)
       v.external.options as "external/options" is
-        valid(conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions))
+        conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
     }
   }
 
@@ -280,26 +280,26 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
     val validMesosVolume = validator[AppVolume] {
       volume =>
-        volume.mode is valid(equalTo(ReadMode.Rw))
-        volume.containerPath is valid(notOneOf(DotPaths: _*))
+        volume.mode is equalTo(ReadMode.Rw)
+        volume.containerPath is notOneOf(DotPaths: _*)
     }
     val dockerVolumeInfo = validator[raml.ExternalVolume] { v =>
       v.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
       v.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
     }
     val validDockerVolume = validator[AppVolume] { volume =>
-      volume.containerPath is valid(notOneOf(DotPaths: _*))
-      volume.external is valid(definedAnd(valid(dockerVolumeInfo)))
+      volume.containerPath is notOneOf(DotPaths: _*)
+      volume.external is definedAnd(dockerVolumeInfo)
     }
     val volumeInfo = validator[raml.ExternalVolume] { v =>
-      v.name is valid(definedAnd(notEmpty))
-      v.provider is valid(definedAnd(equalTo(name)))
-      v.options.get(driverOption) as s"options($quotedDriverOption)" is valid(definedAnd(validLabel))
-      v.options is valid(conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions))
+      v.name is definedAnd(notEmpty)
+      v.provider is definedAnd(equalTo(name))
+      v.options.get(driverOption) as s"options($quotedDriverOption)" is definedAnd(validLabel)
+      v.options is conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
     }
     forAll(
       validator[AppVolume] { v =>
-        v.external is valid(definedAnd(valid(volumeInfo)))
+        v.external is definedAnd(volumeInfo)
       },
       implied(container.`type` == EngineType.Mesos)(validMesosVolume),
       implied(container.`type` == EngineType.Docker)(validDockerVolume)

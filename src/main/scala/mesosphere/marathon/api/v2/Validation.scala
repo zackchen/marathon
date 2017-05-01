@@ -70,7 +70,7 @@ trait Validation {
   private[this] def mapViolation(violation: Violation, desc: Description): Violation = {
     violation match {
       case RuleViolation(value, constraint, description) => RuleViolation(value, constraint, combine(description, desc))
-      case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children.map(mapViolation(_, desc)), combine(description, desc))
+      case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children, combine(description, desc))
     }
   }
 
@@ -264,24 +264,22 @@ trait Validation {
   def validateAll[T](x: T, all: Validator[T]*): Result = all.map(v => validate(x)(v)).fold(Success)(_ and _)
 
   def allViolations(result: Result): Seq[ConstraintViolation] = {
-    def composePath(parent: Description, child: Description): String = "/" + {
-      (parent, child) match {
-        case (Empty | SelfReference, rhs) => renderPath(rhs)
-        case (lhs, Empty | SelfReference) => renderPath(lhs)
-        case (lhs, Indexed(index, Empty | SelfReference)) => renderPath(lhs) + s"($index)"
-        case (lhs, rhs) => renderPath(lhs) + "/" + renderPath(rhs)
+    def composePath(path: List[Description]): String = "/" + {
+      path match {
+        case Nil => ""
+        case head :: Nil => renderPath(head)
+        case head :: tail => renderPath(head) + composePath(tail)
       }
     }
-    def collectViolation(violation: Violation, parent: Description = Empty): Seq[ConstraintViolation] = {
+    def collectViolation(violation: Violation, parents: List[Description] = Nil): Seq[ConstraintViolation] = {
       violation match {
-        case RuleViolation(_, constraint, path) => Seq(ConstraintViolation(composePath(parent, path), constraint))
-        case GroupViolation(_, _, children, path) => children.to[Seq].flatMap(collectViolation(_, path))
+        case RuleViolation(_, constraint, path) => Seq(ConstraintViolation(composePath((path :: parents).reverse), constraint))
+        case GroupViolation(_, _, children, path) => children.to[Seq].flatMap(collectViolation(_, path :: parents))
       }
     }
     result match {
       case Success => Seq.empty
       case Failure(violations) => violations.to[Seq].flatMap(collectViolation(_))
-
     }
   }
 

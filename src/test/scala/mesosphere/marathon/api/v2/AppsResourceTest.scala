@@ -921,7 +921,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("The return code indicates validation error")
       response.getStatus should be(422)
-      response.getEntity.toString should include("/container/volumes(0)/external/options(\\\"dvdi/iops\\\")")
+      response.getEntity.toString should include("/container/volumes(0)/external/options/\\\"dvdi/iops\\\"")
     }
 
     "Creating an app with an external volume w/ relative containerPath DOCKER containerizer should succeed (available with Mesos 1.0)" in new Fixture {
