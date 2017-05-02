@@ -6,7 +6,7 @@ package api.v2.validation
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, Resources, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
+import mesosphere.marathon.raml.{ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, PodVolume, Resources, ShellCommand, TcpHealthCheck, Volume, VolumeMount}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
 
@@ -118,7 +118,7 @@ trait PodsValidation {
     image.id.length is between(1, 1024)
   }
 
-  def volumeMountValidator(volumes: Seq[Volume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
+  def volumeMountValidator(volumes: Seq[PodVolume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
     volumeMount.name.length is between(1, 63)
     volumeMount.name should matchRegexFully(NamePattern)
     volumeMount.mountPath.length is between(1, 1024)
@@ -147,7 +147,7 @@ trait PodsValidation {
       container.artifacts is every(artifactValidator)
     }
 
-  def volumeValidator(containers: Seq[PodContainer]): Validator[Volume] = validator[Volume] { volume =>
+  def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] = validator[PodVolume] { volume =>
     volume.host is optional(notEmpty)
   } and isTrue[Volume]("volume must be referenced by at least one container") { v =>
     containers.exists(_.volumeMounts.exists(_.name == v.name))
