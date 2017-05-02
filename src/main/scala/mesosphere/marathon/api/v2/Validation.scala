@@ -251,12 +251,12 @@ trait Validation {
     }
     def cleanPath(path: List[Description]): List[Description] = path match {
       case Nil => Nil
-      // filter out SelfReference, that is created by valid(validator)
-      case lhs :: SelfReference :: tail => lhs :: cleanPath(tail)
-      // filter out index on self
-      case lhs :: Indexed(index, SelfReference) :: tail => Indexed(index, lhs) :: cleanPath(tail)
       // clean path on access chain
       case AccessChain(elements @ _*) :: tail => AccessChain(cleanPath(elements.toList): _*) :: cleanPath(tail)
+      // filter out SelfReference, that is created by valid(validator)
+      case head :: SelfReference :: tail => head :: cleanPath(tail)
+      // filter out index on self
+      case head :: Indexed(index, SelfReference) :: tail => Indexed(index, head) :: cleanPath(tail)
       case head :: tail => head :: cleanPath(tail)
     }
     def mkPath(path: List[Description]): String = cleanPath(path.reverse).map(renderPath).mkString("/", "/", "")
