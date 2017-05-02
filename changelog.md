@@ -111,7 +111,54 @@ Marathon is in better compliance with various security best-practices. An exampl
 ### Fixed issues
 - [MARATHON-7320](https://jira.mesosphere.com/browse/MARATHON-7320) Fix MAX_PER constraint for attributes.
 
-------------------------------------------------------------
+### Overview
+
+#### File based secrets
+It is possible to define secrets with a given mount path. They can be interpreted as file based secrets by a marathon plugin.
+See the following example:
+
+```
+{
+  "id": "app-with-secrets",
+  "container": {
+    "volumes": [
+      {
+        "containerPath": "path",
+        "secret": {
+          "source": "/path/to/other/secret"
+        }
+      }
+    ]
+  }
+}
+```
+
+#### New secrets API and deprecating old API 
+To define a environment base secret you should now use place the secret definition in place of the usage.
+Shown in the example as `MY_ENV`. Using secret references is now deprecated and will be removed in the next marathon release.
+Shown in the example as `DEPRECATED_WAY`.
+
+```
+{
+  ...
+  "env": {
+    "MY_ENV": {
+      "secret": {
+        "source": "/path/to/secret"
+      }
+    },
+    "DEPRECATED_WAY": {
+      "secret": "deprecated-way-of-secret-refs"
+    }
+  },
+  "secrets": {
+    "deprecated-way-of-secret-refs": {
+      "source": "/path/to/secret"
+    }
+}
+```
+
+
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release
