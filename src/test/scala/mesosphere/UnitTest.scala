@@ -15,11 +15,9 @@ import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.test.{ ExitDisabledTest, Mockito }
-import org.scalatest.matchers.{ Matcher, MatchResult }
 import org.scalatest._
 import org.scalatest.concurrent.{ JavaFutures, ScalaFutures, TimeLimitedTests }
 import org.scalatest.time.{ Minutes, Seconds, Span }
-import mesosphere.marathon.api.v2.ValidationHelper
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -59,29 +57,6 @@ trait ValidationTestLike extends Validation {
     case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
     case th => throw th
   }.get
-
-  def containViolation(tuple: (String, String)): Matcher[Result] = containViolation(tuple._1, tuple._2)
-
-  def containViolation(path: String, message: String): Matcher[Result] = {
-    Matcher {
-      case Success =>
-        MatchResult(
-          false,
-          s"result had no violations; expected ${path} -> ${message}",
-          s"result was success")
-
-      case f: Failure =>
-        val violations = ValidationHelper.getAllRuleConstrains(f)
-
-        MatchResult(
-          violations.exists { v =>
-            v.path.contains(path) && v.constraint == message
-          },
-          s"Violations:\n${violations.mkString("\n")} did not contain ${path} -> ${message}",
-          s"Violation contains ${path} -> ${message}"
-        )
-    }
-  }
 
   def shouldViolate[T](entity: T, path: String, constraint: String)(implicit validator: Validator[T]): Failure = {
     validator(entity) match {

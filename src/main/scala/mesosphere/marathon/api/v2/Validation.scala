@@ -54,6 +54,12 @@ trait Validation {
   }
 
   implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
+    def mapViolation(violation: Violation, desc: Description): Violation = {
+      violation match {
+        case RuleViolation(value, constraint, description) => RuleViolation(value, constraint, combine(description, desc))
+        case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children, combine(description, desc))
+      }
+    }
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
         seq.zipWithIndex.foldLeft[Result](Success) {
@@ -66,34 +72,6 @@ trait Validation {
       }
     }
   }
-
-  private[this] def mapViolation(violation: Violation, desc: Description): Violation = {
-    violation match {
-      case RuleViolation(value, constraint, description) => RuleViolation(value, constraint, combine(description, desc))
-      case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children, combine(description, desc))
-    }
-  }
-
-  /*
-  private[this] val combine: ((Description, Description) => Description) = {
-    case (Empty, rhs) => rhs
-    case (SelfReference, rhs: AccessChain) => rhs
-    case (Indexed(index, Empty), rhs) => Indexed(index, rhs)
-    case (lhs: Explicit, AccessChain(ind @ _*)) => AccessChain(ind :+ lhs: _*)
-    case (lhs: Generic, AccessChain(ind @ _*)) => AccessChain(ind :+ lhs: _*)
-    case (lhs @ Indexed(_, of), AccessChain(ind @ _*)) if of != Empty => AccessChain(ind :+ lhs: _*)
-    case (AccessChain(rhs @ _*), ind @ Indexed(_, Empty)) => AccessChain(ind +: rhs: _*)
-    case (AccessChain(ind @ Indexed(_, Empty), tail @ _*), rhs) => AccessChain(ind.copy(of = rhs) +: tail: _*)
-    case (AccessChain(inner @ _*), AccessChain(outer @ _*)) => AccessChain(outer ++ inner: _*)
-
-    //added by me
-    case (SelfReference, Indexed(index, Empty)) => Indexed(index, SelfReference)
-    case (Indexed(index, SelfReference), rhs) => Indexed(index, rhs)
-
-    case (lhs, rhs) =>
-      throw new IllegalArgumentException(s"Cannot combine description '$lhs' with '$rhs'")
-  }
-  */
 
   def featureEnabled[T](enabledFeatures: Set[String], feature: String): Validator[T] = {
     isTrue(s"Feature $feature is not enabled. Enable with --enable_features $feature)") { _ =>
@@ -151,7 +129,7 @@ trait Validation {
   }
 
   def fetchUriIsValid: Validator[FetchUri] = validator[FetchUri] { fetch =>
-    fetch.uri is valid(uriIsValid)
+    fetch.uri is uriIsValid
   }
 
   def elementsAreUnique[A](errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
@@ -264,16 +242,27 @@ trait Validation {
   def validateAll[T](x: T, all: Validator[T]*): Result = all.map(v => validate(x)(v)).fold(Success)(_ and _)
 
   def allViolations(result: Result): Seq[ConstraintViolation] = {
-    def composePath(path: List[Description]): String = "/" + {
-      path match {
-        case Nil => ""
-        case head :: Nil => renderPath(head)
-        case head :: tail => renderPath(head) + composePath(tail)
-      }
+    def renderPath(desc: Description): String = desc match {
+      case Explicit(s) => s
+      case Generic(s) => s
+      case Indexed(index, of) => s"${renderPath(of)}($index)"
+      case AccessChain(elements @ _*) => elements.map(renderPath).mkString("/")
+      case _ => ""
     }
+    def cleanPath(path: List[Description]): List[Description] = path match {
+      case Nil => Nil
+      // filter out SelfReference, that is created by valid(validator)
+      case lhs :: SelfReference :: tail => lhs :: cleanPath(tail)
+      // filter out index on self
+      case lhs :: Indexed(index, SelfReference) :: tail => Indexed(index, lhs) :: cleanPath(tail)
+      // clean path on access chain
+      case AccessChain(elements @ _*) :: tail => AccessChain(cleanPath(elements.toList): _*) :: cleanPath(tail)
+      case head :: tail => head :: cleanPath(tail)
+    }
+    def mkPath(path: List[Description]): String = cleanPath(path.reverse).map(renderPath).mkString("/", "/", "")
     def collectViolation(violation: Violation, parents: List[Description] = Nil): Seq[ConstraintViolation] = {
       violation match {
-        case RuleViolation(_, constraint, path) => Seq(ConstraintViolation(composePath((path :: parents).reverse), constraint))
+        case RuleViolation(_, constraint, path) => Seq(ConstraintViolation(mkPath(path :: parents), constraint))
         case GroupViolation(_, _, children, path) => children.to[Seq].flatMap(collectViolation(_, path :: parents))
       }
     }
@@ -281,20 +270,6 @@ trait Validation {
       case Success => Seq.empty
       case Failure(violations) => violations.to[Seq].flatMap(collectViolation(_))
     }
-  }
-
-  val renderPath: Description => String = {
-    case Explicit(s) => s
-    case Generic(s) => s
-    case Indexed(index, of) => s"${render(of)}($index)"
-    case AccessChain(elements @ _*) => elements.map(renderPath).mkString("/")
-    case SelfReference => ""
-    case _ => ""
-  }
-
-  val renderPathOption: Description => Option[String] = {
-    case Empty => None
-    case nonEmpty: Description => Some(renderPath(nonEmpty))
   }
 }
 
