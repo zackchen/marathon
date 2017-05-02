@@ -6,7 +6,7 @@ package api.v2.validation
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, EphemeralVolume, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, PodVolume, Resources, ShellCommand, TcpHealthCheck, VolumeMount }
+import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, PodVolume, Resources, ShellCommand, TcpHealthCheck, VolumeMount }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
 
@@ -17,10 +17,10 @@ import mesosphere.marathon.util.SemanticVersion
   */
 @SuppressWarnings(Array("all")) // wix breaks stuff
 trait PodsValidation {
-  import PodsValidationMessages._
   import EnvVarValidation._
   import NameValidation._
   import NetworkValidation._
+  import PodsValidationMessages._
   import SchedulingValidation._
   import SecretValidation._
   import Validation._
@@ -123,10 +123,7 @@ trait PodsValidation {
     volumeMount.name should matchRegexFully(NamePattern)
     volumeMount.mountPath.length is between(1, 1024)
     volumeMount.name is isTrue("Referenced Volume in VolumeMount should exist") { name =>
-      volumes.exists {
-        case ev: EphemeralVolume => ev.name == name
-        case _ => false
-      }
+      volumeNames(volumes).exists(_ == name)
     }
   }
 
@@ -150,10 +147,18 @@ trait PodsValidation {
       container.artifacts is every(artifactValidator)
     }
 
-  def volumeValidator(containers: Seq[PodContainer]): Validator[EphemeralVolume] = validator[EphemeralVolume] { volume =>
-    volume.host is optional(notEmpty)
-  } and isTrue[EphemeralVolume]("volume must be referenced by at least one container") { v =>
-    containers.exists(_.volumeMounts.exists(_.name == v.name))
+  def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] = new Validator[PodVolume] {
+    val validEphemeralVolume = validator[raml.EphemeralVolume] { v => v.host is optional(notEmpty) }
+
+    override def apply(v: raml.PodVolume): Result = {
+      v match {
+        case v: raml.EphemeralVolume => validate(v)(validEphemeralVolume)
+        case v: raml.PodSecretVolume => Success
+        case _ => Failure(Set(RuleViolation(v, "Unknown pod volume type", None)))
+      }
+    }
+  } and isTrue[PodVolume]("volume must be referenced by at least one container") { v =>
+    containers.exists(_.volumeMounts.exists(_.name == volumeName(v)))
   }
 
   val fixedPodScalingPolicyValidator = validator[FixedPodScalingPolicy] { f =>
@@ -186,11 +191,10 @@ trait PodsValidation {
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
-    pod.volumes.map { case ev: EphemeralVolume => ev } is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[EphemeralVolume] =>
-      val names = volumes.map(_.name)
+    pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
+      val names = volumeNames(volumes)
       names.distinct.size == names.size
     }
-    // TODO adju: secret volumes
     pod.containers is notEmpty and every(containerValidator(pod, enabledFeatures, mesosMasterVersion))
     pod.containers is isTrue(ContainerNamesMustBeUnique) { containers: Seq[PodContainer] =>
       val names = pod.containers.map(_.name)
@@ -201,6 +205,12 @@ trait PodsValidation {
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
+  }
+
+  def volumeNames(volumes: Seq[PodVolume]) = volumes.map(volumeName)
+  def volumeName(volume: PodVolume): String = volume match {
+    case raml.EphemeralVolume(name, _) => name
+    case raml.PodSecretVolume(name, _) => name
   }
 }
 
