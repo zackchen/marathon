@@ -7,7 +7,7 @@ uses:
   secrets: secrets.raml
 
 types:
-  Volume:
+  EphemeralVolume:
     type: object
     properties:
       name:
@@ -128,3 +128,15 @@ types:
         description: Secret that is used by this volume
   AppVolume:
     type: AppPersistentVolume | AppExternalVolume | AppSecretVolume | AppDockerVolume
+  PodSecretVolume:
+    type: object
+    properties:
+      name:
+        type: string
+        minLength: 1
+        description: Name of the pod level volume
+      secret:
+        type: secrets.SecretDef
+        description: Secret that is used by this volume
+  PodVolume:
+    type: EphemeralVolume | PodSecretVolume

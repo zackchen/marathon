@@ -1,7 +1,10 @@
 package mesosphere.marathon
 package core.pod
 
-sealed trait Volume extends Product with Serializable {
+import mesosphere.marathon.plugin.PodVolumeSpec
+import mesosphere.marathon.state.Secret
+
+sealed trait Volume extends Product with Serializable with PodVolumeSpec {
   val name: String
 }
 
@@ -16,3 +19,8 @@ case class EphemeralVolume(name: String) extends Volume
   * to one or more sub-containers.
   */
 case class HostVolume(name: String, hostPath: String) extends Volume
+
+/**
+  * A volume referring to an existing secret.
+  */
+case class SecretVolume(name: String, secret: Secret) extends Volume
