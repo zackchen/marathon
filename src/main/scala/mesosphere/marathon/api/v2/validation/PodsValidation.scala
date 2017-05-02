@@ -138,9 +138,9 @@ trait PodsValidation {
 
   def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
     validator[PodContainer] { container =>
-      container.resources is valid(resourceValidator)
+      container.resources is resourceValidator
       container.endpoints is every(endpointValidator(pod.networks))
-      container.image.getOrElse(Image(ImageType.Docker, "abc")) is valid(imageValidator)
+      container.image.getOrElse(Image(ImageType.Docker, "abc")) is imageValidator
       container.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
       container.healthCheck is optional(healthCheckValidator(container.endpoints, mesosMasterVersion))
       container.volumeMounts is every(volumeMountValidator(pod.volumes))
@@ -192,8 +192,8 @@ trait PodsValidation {
       val names = pod.containers.map(_.name)
       names.distinct.size == names.size
     }
-    pod.secrets is empty or (valid(secretValidator) and featureEnabled(enabledFeatures, Features.SECRETS))
-    pod.networks is valid(ramlNetworksValidator)
+    pod.secrets is empty or (secretValidator and featureEnabled(enabledFeatures, Features.SECRETS))
+    pod.networks is ramlNetworksValidator
     pod.scheduling is optional(schedulingValidator)
     pod.scaling is optional(scalingValidator)
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique

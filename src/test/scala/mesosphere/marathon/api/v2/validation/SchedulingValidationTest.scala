@@ -17,7 +17,7 @@ class SchedulingValidationTest extends UnitTest with ValidationTestLike {
     def validAppConstraint(subtitle: String, c: Seq[String]): Unit = {
       subtitle in shouldSucceed(c)(complyWithAppConstraintRules)
     }
-    def failsAsExpected(subtitle: String, c: Seq[String], violatedConstraint: String, debug: Boolean = false): Unit = {
+    def failsAsExpected(subtitle: String, c: Seq[String], violatedConstraint: String): Unit = {
       subtitle in shouldViolate(c, "/", violatedConstraint)(complyWithAppConstraintRules)
     }
     "validating CLUSTER constraint" should {

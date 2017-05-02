@@ -441,7 +441,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
-      app.dependencies is valid
+      app.dependencies is every(PathId.pathIdValidator)
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
   /**

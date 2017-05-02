@@ -155,7 +155,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
               hostPort = Some(80),
               containerPort = Some(80),
               networkNames = List("1", "2"))))))
-        shouldSucceed(pod)
+        shouldViolate(pod, "/containers(0)/endpoints(0)/networkNames(1)", "is not one of (1)")
       }
 
       "consider a portMapping with no networkNames as valid" in {
@@ -200,7 +200,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
                 containerPort = Some(80),
                 hostPort = Some(80),
                 networkNames = List("invalid-network-name"))))))
-        shouldViolate(pod, "", "")
+        shouldViolate(pod, "/containers(0)/endpoints(0)/networkNames(0)", "is not one of (1)")
       }
 
       "consider portMapping without networkNames nor hostPort as valid" in {

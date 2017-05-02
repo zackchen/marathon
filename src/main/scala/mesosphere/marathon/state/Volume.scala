@@ -346,7 +346,7 @@ object ExternalVolumeInfo {
     info.size.each should be > 0L
     info.name should matchRegex(LabelRegex)
     info.provider should matchRegex(LabelRegex)
-    info.options is valid(validOptions)
+    info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
@@ -367,6 +367,6 @@ object ExternalVolume {
   def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>
     ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
-    ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
+    ev.external is ExternalVolumeInfo.validExternalVolumeInfo
   } and ExternalVolumes.validExternalVolume
 }

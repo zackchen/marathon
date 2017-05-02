@@ -53,7 +53,7 @@ trait AppValidation {
   def dockerDockerContainerValidator(networks: Seq[Network]): Validator[Container] = {
     val validDockerEngineSpec: Validator[DockerContainer] = validator[DockerContainer] { docker =>
       docker.image is notEmpty
-      docker.portMappings is valid(optional(portMappingsValidator(networks)))
+      docker.portMappings is optional(portMappingsValidator(networks))
     }
     validator { (container: Container) =>
       container.docker is definedAnd(validDockerEngineSpec)
@@ -65,7 +65,7 @@ trait AppValidation {
       docker.image is notEmpty
     }
     validator{ (container: Container) =>
-      container.docker is valid(definedAnd(validMesosEngineSpec))
+      container.docker is definedAnd(validMesosEngineSpec)
     }
   }
 
@@ -84,7 +84,7 @@ trait AppValidation {
       appc.id is optional(validId)
     }
     validator{ (container: Container) =>
-      container.appc is valid(definedAnd(validMesosEngineSpec))
+      container.appc is definedAnd(validMesosEngineSpec)
     }
   }
 
@@ -99,7 +99,7 @@ trait AppValidation {
         docker.credential is empty // credentials aren't supported this way anymore
       }
       validator[Container] { container =>
-        container.docker is optional(valid(oldDockerDockerContainerAPI))
+        container.docker is optional(oldDockerDockerContainerAPI)
       }
     }
     val forMesosContainerizer: Validator[Container] = {
@@ -110,7 +110,7 @@ trait AppValidation {
         docker.portMappings is empty
       }
       validator[Container] { container =>
-        container.docker is optional(valid(oldMesosDockerContainerAPI))
+        container.docker is optional(oldMesosDockerContainerAPI)
       }
     }
     override def apply(container: Container): Result = {
@@ -127,7 +127,7 @@ trait AppValidation {
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
         val names: Seq[String] = vols.flatMap(_.external.flatMap(_.name))
         names.distinct.size == names.size
-      } and every(valid(validVolume(container, enabledFeatures)))
+      } and every(validVolume(container, enabledFeatures))
 
     val validGeneralContainer: Validator[Container] = validator[Container] { container =>
       container.portMappings is optional(portMappingsValidator(networks))
@@ -155,8 +155,8 @@ trait AppValidation {
   def validVolume(container: Container, enabledFeatures: Set[String]): Validator[AppVolume] = new Validator[AppVolume] {
     import state.PathPatterns._
     val validHostVolume = validator[AppVolume] { v =>
-      v.containerPath is valid(notEmpty)
-      v.hostPath is valid(definedAnd(notEmpty))
+      v.containerPath is notEmpty
+      v.hostPath is definedAnd(notEmpty)
     }
     val validPersistentVolume = {
       val notHaveConstraintsOnRoot = isTrue[PersistentVolume](
@@ -206,10 +206,10 @@ trait AppValidation {
       } and meetMaxSizeConstraint and notHaveConstraintsOnRoot and haveProperlyOrderedMaxSize
 
       validator[AppVolume] { v =>
-        v.containerPath is valid(notEqualTo("") and notOneOf(DotPaths: _*))
-        v.containerPath is valid(matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\""))
+        v.containerPath is notEqualTo("") and notOneOf(DotPaths: _*)
+        v.containerPath is matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\"")
         v.mode is equalTo(ReadMode.Rw) // see AppConversion, default is RW
-        v.persistent is valid(definedAnd(validPersistentInfo))
+        v.persistent is definedAnd(validPersistentInfo)
       }
     }
     val validExternalVolume: Validator[AppVolume] = {
@@ -218,15 +218,15 @@ trait AppValidation {
         option.keys.each should matchRegex(OptionKeyRegex)
       }
       val validExternalInfo: Validator[ExternalVolume] = validator[ExternalVolume] { info =>
-        info.name is valid(definedAnd(matchRegex(LabelRegex)))
-        info.provider is valid(definedAnd(matchRegex(LabelRegex)))
+        info.name is definedAnd(matchRegex(LabelRegex))
+        info.provider is definedAnd(matchRegex(LabelRegex))
         info.options is validOptions
       }
 
       forAll(
         validator[AppVolume] { v =>
-          v.containerPath is valid(notEmpty)
-          v.external is valid(definedAnd(validExternalInfo))
+          v.containerPath is notEmpty
+          v.external is definedAnd(validExternalInfo)
         },
         { v: AppVolume => v.external.exists(_.provider.nonEmpty) } -> ExternalVolumes.validRamlVolume(container),
         featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
@@ -250,7 +250,7 @@ trait AppValidation {
       portNames.contains(name)
     }
     validator[ReadinessCheck] { rc =>
-      rc.portName is valid(portNameExists)
+      rc.portName is portNameExists
       rc.timeoutSeconds should be < rc.intervalSeconds
     }
   }
@@ -260,7 +260,7 @@ trait AppValidation {
     */
   def validateOldAppUpdateAPI: Validator[AppUpdate] = forAll(
     validator[AppUpdate] { update =>
-      update.container is optional(valid(validOldContainerAPI))
+      update.container is optional(validOldContainerAPI)
       update.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsIndependentOfNetworks)
       update.ipAddress is optional(isTrue(
         "ipAddress/discovery is not allowed for Docker containers") { (ipAddress: IpAddress) =>
@@ -302,8 +302,8 @@ trait AppValidation {
       update.secrets is optional(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
       update.fetch is optional(every(valid))
       update.portDefinitions is optional(portDefinitionsValidator)
-      update.container is optional(valid(validContainer(enabledFeatures, update.networks.getOrElse(Nil))))
-      update.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(update.residency.isDefined) and notEmpty))
+      update.container is optional(validContainer(enabledFeatures, update.networks.getOrElse(Nil)))
+      update.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(update.residency.isDefined) and notEmpty)
     },
     isTrue("must not be root")(!_.id.fold(false)(PathId(_).isRoot)),
     isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),
@@ -327,7 +327,7 @@ trait AppValidation {
     */
   val validateOldAppAPI: Validator[App] = forAll(
     validator[App] { app =>
-      app.container is optional(valid(validOldContainerAPI))
+      app.container is optional(validOldContainerAPI)
       app.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsIndependentOfNetworks)
       app.ipAddress is optional(isTrue(
         "ipAddress/discovery is not allowed for Docker containers") { (ipAddress: IpAddress) =>
@@ -385,18 +385,18 @@ trait AppValidation {
 
   /** validate most canonical API fields */
   private def validBasicAppDefinition(enabledFeatures: Set[String]): Validator[App] = validator[App] { app =>
-    app.container is optional(valid(validContainer(enabledFeatures, app.networks)))
+    app.container is optional(validContainer(enabledFeatures, app.networks))
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
     app.healthChecks is every(portIndexIsValid(portIndices(app)))
     app must haveAtMostOneMesosHealthCheck
     app.fetch is every(valid)
-    app.secrets is valid({ secrets: Map[String, SecretDef] =>
+    app.secrets is { secrets: Map[String, SecretDef] =>
       secrets.nonEmpty
-    } -> (featureEnabled(enabledFeatures, Features.SECRETS)))
-    app.secrets is valid(featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator)))
+    } -> (featureEnabled(enabledFeatures, Features.SECRETS))
+    app.secrets is featureEnabledImplies(enabledFeatures, Features.SECRETS)(every(secretEntryValidator))
     app.env is envValidator(strictNameValidation = false, app.secrets, enabledFeatures)
-    app.acceptedResourceRoles is valid(optional(ResourceRole.validAcceptedResourceRoles(app.residency.isDefined) and notEmpty))
+    app.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(app.residency.isDefined) and notEmpty)
     app must complyWithGpuRules(enabledFeatures)
     app must complyWithMigrationAPI
     app must complyWithReadinessCheckRules
