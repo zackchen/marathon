@@ -6,7 +6,7 @@ package api.v2.validation
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, PodVolume, Resources, ShellCommand, TcpHealthCheck, Volume, VolumeMount}
+import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, PodVolume, Resources, ShellCommand, TcpHealthCheck, Volume, VolumeMount }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
 
