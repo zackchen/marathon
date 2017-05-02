@@ -237,7 +237,7 @@ trait AppValidation {
         case v: AppPersistentVolume => validate(v)(validPersistentVolume)
         case v: AppExternalVolume => validate(v)(validExternalVolume)
         case v: AppSecretVolume => Success // no need for extra validation
-        case _ => Failure(Set(RuleViolation(v, "Unknown volume type", None)))
+        case _ => Failure(Set(RuleViolation(v, "Unknown app volume type", None)))
       }
     }
   }
