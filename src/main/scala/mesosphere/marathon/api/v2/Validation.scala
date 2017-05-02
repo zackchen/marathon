@@ -249,15 +249,21 @@ trait Validation {
       case AccessChain(elements @ _*) => elements.map(renderPath).mkString("/")
       case _ => ""
     }
-    def cleanPath(path: List[Description]): List[Description] = path match {
-      case Nil => Nil
-      // clean path on access chain
-      case AccessChain(elements @ _*) :: tail => AccessChain(cleanPath(elements.toList): _*) :: cleanPath(tail)
-      // filter out SelfReference, that is created by valid(validator)
-      case head :: SelfReference :: tail => head :: cleanPath(tail)
-      // filter out index on self
-      case head :: Indexed(index, SelfReference) :: tail => Indexed(index, head) :: cleanPath(tail)
-      case head :: tail => head :: cleanPath(tail)
+    def cleanPath(path: List[Description]): List[Description] = {
+      val updatedHead = path match {
+        // clean path on access chain
+        case AccessChain(elements @ _*) :: tail => AccessChain(cleanPath(elements.toList): _*) :: tail
+        // default rule
+        case path => path
+      }
+      updatedHead match {
+        case Nil => Nil
+        // filter out index on self
+        case head :: Indexed(index, SelfReference) :: tail => Indexed(index, head) :: cleanPath(tail)
+        // filter out SelfReference, that is created by valid(validator)
+        case head :: SelfReference :: tail => head :: cleanPath(tail)
+        case head :: tail => head :: cleanPath(tail)
+      }
     }
     def mkPath(path: List[Description]): String = cleanPath(path.reverse).map(renderPath).mkString("/", "/", "")
     def collectViolation(violation: Violation, parents: List[Description] = Nil): Seq[ConstraintViolation] = {
