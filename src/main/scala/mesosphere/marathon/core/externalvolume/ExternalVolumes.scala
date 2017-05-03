@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.externalvolume
 
+import com.wix.accord.Descriptions.{ AccessChain, Explicit }
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
 import mesosphere.marathon.raml.AppVolume
@@ -20,7 +21,7 @@ object ExternalVolumes {
   def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
     def apply(ev: ExternalVolume) = providers.get(ev.external.provider) match {
       case Some(p) => p.validations.volume(ev)
-      case None => Failure(Set(RuleViolation(None, "is unknown provider", Descriptions.Generic("external/provider"))))
+      case None => Failure(Set(RuleViolation(None, "is unknown provider", AccessChain(Explicit("external"), Explicit("provider")))))
     }
   }
 
@@ -29,7 +30,7 @@ object ExternalVolumes {
       case Some(p) =>
         validate(ev)(p.validations.ramlVolume(container))
       case None =>
-        Failure(Set(RuleViolation(None, "is unknown provider", Descriptions.Generic("external/provider"))))
+        Failure(Set(RuleViolation(None, "is unknown provider", AccessChain(Explicit("external"), Explicit("provider")))))
     }
   }
 

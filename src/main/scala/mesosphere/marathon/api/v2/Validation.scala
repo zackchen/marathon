@@ -54,10 +54,17 @@ trait Validation {
   }
 
   implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
+    // TODO: as long as accord does not support all description combinations, a custom combine is needed.
+    // See: https://github.com/wix/accord/issues/109
+    def combineDesc(left: Description, right: Description): Description = (left, right) match {
+      case (lhs: Explicit, Indexed(index, Empty)) => AccessChain(Indexed(index, SelfReference), lhs)
+      case (lhs: Generic, Indexed(index, Empty)) => AccessChain(Indexed(index, SelfReference), lhs)
+      case (lhs, rhs) => combine(lhs, rhs)
+    }
     def mapViolation(violation: Violation, desc: Description): Violation = {
       violation match {
-        case RuleViolation(value, constraint, description) => RuleViolation(value, constraint, combine(description, desc))
-        case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children, combine(description, desc))
+        case RuleViolation(value, constraint, description) => RuleViolation(value, constraint, combineDesc(description, desc))
+        case GroupViolation(value, constraint, children, description) => GroupViolation(value, constraint, children, combineDesc(description, desc))
       }
     }
     new Validator[Iterable[T]] {
@@ -254,7 +261,7 @@ trait Validation {
         // clean path on access chain
         case AccessChain(elements @ _*) :: tail => AccessChain(cleanPath(elements.toList): _*) :: tail
         // default rule
-        case path => path
+        case _ => path
       }
       updatedHead match {
         case Nil => Nil

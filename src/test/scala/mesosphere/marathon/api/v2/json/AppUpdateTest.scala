@@ -94,7 +94,7 @@ class AppUpdateTest extends UnitTest {
 
       shouldViolate(update.copy(secrets = Some(Map(
         "" -> SecretDef("a/b/c")
-      ))), "/secrets()/", "must not be empty")
+      ))), "/secrets(0)/", "must not be empty")
     }
 
     "SerializationRoundtrip for empty definition" in {

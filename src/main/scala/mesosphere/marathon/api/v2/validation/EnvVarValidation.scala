@@ -28,9 +28,8 @@ trait EnvVarValidation {
       name is notEmpty
     }
 
-    validator[(String, EnvVarValueOrSecret)] { t =>
-      // use of "value" relies on special behavior in Validation that humanizes generated error messages
-      t._1 as "value" is validName
+    new Validator[(String, EnvVarValueOrSecret)] {
+      override def apply(v1: (String, EnvVarValueOrSecret)): Result = validName(v1._1)
     }
   }
 

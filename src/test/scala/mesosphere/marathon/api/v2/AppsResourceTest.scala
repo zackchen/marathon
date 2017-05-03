@@ -100,7 +100,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       When("The request is processed")
 
-      appsResource.create(body.getBytes("UTF-8"), false, auth.request)
+      appsResource.create(body.getBytes("UTF-8"), force = false, auth.request)
     }
   }
 
@@ -292,7 +292,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val caught = intercept[SerializationFailedException] {
         appsResource.replace(updatedApp.id, updatedBody, force = false, partialUpdate = false, auth.request)
       }
-      caught.getMessage() should be(NetworkConversionMessages.ContainerNetworkRequiresName)
+      caught.getMessage should be(NetworkConversionMessages.ContainerNetworkRequiresName)
     }
 
     "Create a new app without IP/CT when default virtual network is bar" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
@@ -575,7 +575,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("It fails")
       response.getStatus should be(422)
-      response.getEntity.toString should include("/env(NAMED_FOO)")
+      response.getEntity.toString should include("/env(0)")
       response.getEntity.toString should include("references an undefined secret")
     }
 
@@ -608,7 +608,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
         val (body, plan) = prepareApp(app, groupManager)
 
         Then("A constraint violation exception is thrown")
-        val response = appsResource.create(body, false, auth.request)
+        val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
       }
 
@@ -617,7 +617,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
           cpus = -1)
         val (body, _) = prepareApp(app, groupManager)
 
-        val response = appsResource.create(body, false, auth.request)
+        val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
       }
 
@@ -626,7 +626,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
           instances = -1)
         val (body, _) = prepareApp(app, groupManager)
 
-        val response = appsResource.create(body, false, auth.request)
+        val response = appsResource.create(body, force = false, auth.request)
         response.getStatus should be(422)
       }
 
@@ -668,7 +668,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val (body, _) = prepareApp(app, groupManager)
 
       Then("A constraint violation exception is thrown")
-      val response = appsResource.create(body, false, auth.request)
+      val response = appsResource.create(body, force = false, auth.request)
       response.getStatus should be(422)
     }
 
@@ -682,7 +682,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("A constraint violation exception is thrown")
       val body = invalidAppJson.getBytes("UTF-8")
-      val response = appsResource.create(body, false, auth.request)
+      val response = appsResource.create(body, force = false, auth.request)
       response.getStatus should be(422)
     }
 
@@ -1234,7 +1234,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       index.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to add an app")
-      val create = appsResource.create(app.getBytes("UTF-8"), false, req)
+      val create = appsResource.create(app.getBytes("UTF-8"), force = false, req)
       Then("we receive a NotAuthenticated response")
       create.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -1254,12 +1254,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       replaceMultiple.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to delete an app")
-      val delete = appsResource.delete(false, "", req)
+      val delete = appsResource.delete(force = false, "", req)
       Then("we receive a NotAuthenticated response")
       delete.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("we try to restart an app")
-      val restart = appsResource.restart("", false, req)
+      val restart = appsResource.restart("", force = false, req)
       Then("we receive a NotAuthenticated response")
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -1277,7 +1277,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       val app = """{"id":"/a","cmd":"foo","ports":[]}"""
 
       When("we try to create an app")
-      val create = appsResource.create(app.getBytes("UTF-8"), false, req)
+      val create = appsResource.create(app.getBytes("UTF-8"), force = false, req)
       Then("we receive a NotAuthorized response")
       create.getStatus should be(auth.UnauthorizedStatus)
 
@@ -1297,12 +1297,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       replaceMultiple.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to remove an app")
-      val delete = appsResource.delete(false, "/a", req)
+      val delete = appsResource.delete(force = false, "/a", req)
       Then("we receive a NotAuthorized response")
       delete.getStatus should be(auth.UnauthorizedStatus)
 
       When("we try to restart an app")
-      val restart = appsResource.restart("/a", false, req)
+      val restart = appsResource.restart("/a", force = false, req)
       Then("we receive a NotAuthorized response")
       restart.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -1345,7 +1345,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       Then("A 404 is returned")
       val exception = intercept[AppNotFoundException] {
-        appsResource.delete(false, "/foo", req)
+        appsResource.delete(force = false, "/foo", req)
       }
       exception.getMessage should be("App '/foo' does not exist")
     }

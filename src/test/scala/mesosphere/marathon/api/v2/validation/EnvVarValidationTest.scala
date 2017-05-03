@@ -29,27 +29,27 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
       behave like compliantEnv("numerical env", Environment("9" -> "x"), strictNameValidation = false)
 
       "fail with a numerical env variable name" in new WithoutSecrets {
-        shouldViolate(Wrapper(Environment("9" -> "x")), "/env(9)", MustContainOnlyAlphanumeric)
+        shouldViolate(Wrapper(Environment("9" -> "x")), "/env(0)", MustContainOnlyAlphanumeric)
       }
 
-      def failsWhenExpected(subtitle: String, strictNameValidation: Boolean): Unit = {
-        s"fail with empty variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
-          shouldViolate(Wrapper(Environment("" -> "x")), "/env()", "must not be empty")
-          if (strictNameValidation) shouldViolate(Wrapper(Environment("" -> "x")), "/env()", MustContainOnlyAlphanumeric)
+      def failsWhenExpected(subtitle: String, strict: Boolean): Unit = {
+        s"fail with empty variable name $subtitle" in new WithoutSecrets(strict) {
+          shouldViolate(Wrapper(Environment("" -> "x")), "/env(0)", "must not be empty")
+          if (strict) shouldViolate(Wrapper(Environment("" -> "x")), "/env(0)", MustContainOnlyAlphanumeric)
         }
 
-        s"fail with too long variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
-          val name = ("x" * 255)
-          if (strictNameValidation) {
-            shouldViolate(Wrapper(Environment(name -> "x")), s"/env($name)", MustContainOnlyAlphanumeric)
+        s"fail with too long variable name $subtitle" in new WithoutSecrets(strict) {
+          val name = "x" * 255
+          if (strict) {
+            shouldViolate(Wrapper(Environment(name -> "x")), s"/env(0)", MustContainOnlyAlphanumeric)
           } else {
             shouldSucceed(Wrapper(Environment(name -> "x")))
           }
         }
       }
 
-      behave like failsWhenExpected("(strict)", true)
-      behave like failsWhenExpected("(non-strict)", false)
+      behave like failsWhenExpected("(strict)", strict = true)
+      behave like failsWhenExpected("(non-strict)", strict = false)
     }
   }
 
