@@ -123,7 +123,7 @@ trait PodsValidation {
     volumeMount.name should matchRegexFully(NamePattern)
     volumeMount.mountPath.length is between(1, 1024)
     volumeMount.name is isTrue("Referenced Volume in VolumeMount should exist") { name =>
-      volumeNames(volumes).exists(_ == name)
+      volumeNames(volumes).contains(name)
     }
   }
 

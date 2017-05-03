@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.core.pod.{ HostVolume, Volume }
+import mesosphere.marathon.core.pod
 import mesosphere.marathon.state.{ DiskType, ExternalVolumeInfo, PersistentVolumeInfo, Secret, SecretVolume }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
@@ -9,20 +9,20 @@ import org.apache.mesos.{ Protos => Mesos }
 
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
-  implicit val volumeRamlReader: Reads[PodVolume, Volume] = Reads {
+  implicit val volumeRamlReader: Reads[PodVolume, pod.Volume] = Reads {
     case ev: EphemeralVolume =>
       ev.host match {
-        case Some(hostPath) => HostVolume(ev.name, hostPath)
+        case Some(hostPath) => pod.HostVolume(ev.name, hostPath)
         case None => core.pod.EphemeralVolume(ev.name)
       }
     case sv: PodSecretVolume =>
       core.pod.SecretVolume(sv.name, Secret(sv.secret.source))
   }
 
-  implicit val volumeRamlWriter: Writes[Volume, PodVolume] = Writes {
-    case e: EphemeralVolume => raml.EphemeralVolume(e.name)
-    case h: HostVolume => raml.EphemeralVolume(h.name, Some(h.hostPath))
-    case s: core.pod.SecretVolume => PodSecretVolume(s.name, SecretDef(s.secret.source))
+  implicit val volumeRamlWriter: Writes[pod.Volume, PodVolume] = Writes {
+    case e: pod.EphemeralVolume => raml.EphemeralVolume(e.name)
+    case h: pod.HostVolume => raml.EphemeralVolume(h.name, Some(h.hostPath))
+    case s: pod.SecretVolume => PodSecretVolume(s.name, SecretDef(s.secret.source))
   }
 
   implicit val volumeModeWrites: Writes[Mesos.Volume.Mode, ReadMode] = Writes {
