@@ -579,7 +579,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("references an undefined secret")
     }
 
-    "Create the secrets feature is NOT enabled an app (that uses secret refs) fails" in new Fixture(configArgs = Seq()) {
+    "The secrets feature is NOT enabled and create app (that uses secret refs) fails" in new Fixture(configArgs = Seq()) {
       Given("The secrets feature is NOT enabled")
 
       config.isFeatureSet(Features.SECRETS) should be(false)
@@ -599,7 +599,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("Feature secrets is not enabled")
     }
 
-    "Create the secrets feature is NOT enabled an app (that uses secret defs) fails" in new Fixture(configArgs = Seq()) {
+    "The secrets feature is NOT enabled and create app (that uses secret defs) fails" in new Fixture(configArgs = Seq()) {
       Given("The secrets feature is NOT enabled")
 
       config.isFeatureSet(Features.SECRETS) should be(false)
@@ -618,7 +618,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("requires the secrets feature to be enabled")
     }
 
-    "Create the secrets feature is NOT enabled an app (that uses file base secrets) fails" in new Fixture(configArgs = Seq()) {
+    "The secrets feature is NOT enabled and create app (that uses file base secrets) fails" in new Fixture(configArgs = Seq()) {
       Given("The secrets feature is NOT enabled")
 
       config.isFeatureSet(Features.SECRETS) should be(false)
