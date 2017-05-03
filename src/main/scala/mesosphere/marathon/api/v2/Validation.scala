@@ -7,11 +7,9 @@ import com.wix.accord.Descriptions._
 import com.wix.accord._
 import com.wix.accord.dsl._
 import com.wix.accord.ViolationBuilder._
-import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.state.FetchUri
 import mesosphere.marathon.stream.Implicits._
 import org.slf4j.LoggerFactory
-import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
 import scala.util.matching.Regex
@@ -92,22 +90,6 @@ trait Validation {
     */
   def featureEnabledImplies[T](enabledFeatures: Set[String], feature: String)(implicit v: Validator[T]): Validator[T] =
     implied[T](enabledFeatures.contains(feature))(v)
-
-  implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
-    Json.obj(
-      "message" -> "Object is not valid",
-      "details" -> {
-        allViolations(f)
-          .groupBy(_.path)
-          .map {
-            case (path, ruleViolations) =>
-              Json.obj(
-                "path" -> path,
-                "errors" -> ruleViolations.map(_.constraint)
-              )
-          }
-      })
-  }
 
   def urlIsValid: Validator[String] = {
     new Validator[String] {
@@ -248,6 +230,22 @@ trait Validation {
 
   def validateAll[T](x: T, all: Validator[T]*): Result = all.map(v => validate(x)(v)).fold(Success)(_ and _)
 
+}
+
+object Validation extends Validation {
+
+  /**
+    * Marathon internal representation of a constraint violation.
+    * @param path a string representation of the path to the violation. E.g. /foo/bla(12)/bar
+    * @param constraint the violation
+    */
+  case class ConstraintViolation(path: String, constraint: String)
+
+  /**
+    * Returns a flattened sequence of constraintViolations from a given result.
+    * @param result the validation result from accord.
+    * @return a flattened list of all violations.
+    */
   def allViolations(result: Result): Seq[ConstraintViolation] = {
     def renderPath(desc: Description): String = desc match {
       case Explicit(s) => s
@@ -283,15 +281,6 @@ trait Validation {
       case Success => Seq.empty
       case Failure(violations) => violations.to[Seq].flatMap(collectViolation(_))
     }
-  }
-}
-
-object Validation extends Validation {
-
-  case class ConstraintViolation(path: String, constraint: String)
-
-  implicit class AsDescription(val optional: Option[String]) extends AnyVal {
-    def asDescription: Description = optional.fold[Description](Empty)(Explicit)
   }
 
   def forAll[T](all: Validator[T]*): Validator[T] = new Validator[T] {

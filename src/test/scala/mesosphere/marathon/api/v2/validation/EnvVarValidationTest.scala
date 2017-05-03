@@ -41,7 +41,7 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
         s"fail with too long variable name $subtitle" in new WithoutSecrets(strict) {
           val name = "x" * 255
           if (strict) {
-            shouldViolate(Wrapper(Environment(name -> "x")), s"/env(0)", MustContainOnlyAlphanumeric)
+            shouldViolate(Wrapper(Environment(name -> "x")), "/env(0)", MustContainOnlyAlphanumeric)
           } else {
             shouldSucceed(Wrapper(Environment(name -> "x")))
           }

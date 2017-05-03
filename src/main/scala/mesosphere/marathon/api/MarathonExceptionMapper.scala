@@ -11,7 +11,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.google.inject.Singleton
 import com.sun.jersey.api.NotFoundException
-import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.json.Formats._
 import akka.http.scaladsl.model.StatusCodes._
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ JsResultException, JsValue, Json }

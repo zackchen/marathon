@@ -5,9 +5,9 @@ import com.wix.accord.Descriptions.Explicit
 import mesosphere.UnitTest
 import com.wix.accord.{ Failure, RuleViolation }
 import play.api.libs.json._
+import mesosphere.marathon.api.v2.json.Formats.failureWrites
 
 class ValidationTest extends UnitTest {
-  import Validation._
 
   "The failure format" should {
     "write validations errors" in {

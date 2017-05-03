@@ -5,6 +5,7 @@ import com.wix.accord.{ Failure, Result, Success }
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
+import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
@@ -101,7 +102,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
         Json.prettyPrint(
           result match {
             case Success => JsString("Success")
-            case f: Failure => Json.toJson(f)(Validation.failureWrites)
+            case f: Failure => Json.toJson(f)(Formats.failureWrites)
           }
         )
       }

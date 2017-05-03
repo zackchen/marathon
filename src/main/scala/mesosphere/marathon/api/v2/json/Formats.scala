@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package api.v2.json
 
+import com.wix.accord.Failure
+import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.{ DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo }
@@ -54,7 +56,8 @@ trait Formats
     with ReadinessCheckFormats
     with DeploymentFormats
     with EventFormats
-    with PluginFormats {
+    with PluginFormats
+    with ValidationFormats {
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(
@@ -527,4 +530,24 @@ trait PluginFormats {
   ) (d => (d.id, d.plugin, d.implementation, d.tags, d.info))
 
   implicit lazy val pluginDefinitionsFormat: Writes[PluginDefinitions] = Json.writes[PluginDefinitions]
+}
+
+trait ValidationFormats {
+
+  implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
+    Json.obj(
+      "message" -> "Object is not valid",
+      "details" -> {
+        Validation.allViolations(f)
+          .groupBy(_.path)
+          .map {
+            case (path, ruleViolations) =>
+              Json.obj(
+                "path" -> path,
+                "errors" -> ruleViolations.map(_.constraint)
+              )
+          }
+      })
+  }
+
 }
