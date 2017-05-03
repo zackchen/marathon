@@ -335,7 +335,7 @@ object TaskGroupBuilder extends StrictLogging {
 
           containerInfo.addVolumes(volume)
 
-        case _: SecretVolume => // Is handled in the plugin
+        case _: SecretVolume => // Is handled in the plugins
       }
     }
 

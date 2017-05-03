@@ -77,6 +77,11 @@ trait ContainerSpec {
     * The labels in that container
     */
   val labels: Map[String, String]
+
+  /**
+    * Pod volume mounts.
+    */
+  val volumeMounts: Seq[VolumeMountSpec]
 }
 
 /**
@@ -146,4 +151,16 @@ trait PodVolumeSpec {
 trait PodSecretVolume extends PodVolumeSpec {
 
   val secret: Secret
+}
+
+/**
+  * Pod volume mount
+  */
+trait VolumeMountSpec {
+
+  val name: String
+
+  val mountPath: String
+
+  val readOnly: Option[Boolean]
 }
