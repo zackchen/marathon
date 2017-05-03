@@ -4,7 +4,7 @@ package api.v2.validation
 import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, Network, NetworkMode, Pod, PodContainer, Resources, Volume, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, Resources, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
@@ -61,7 +61,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
     }
 
     "be rejected if volume names are not unique" in new Fixture {
-      val volume = Volume("volume", host = Some("/foo"))
+      val volume = EphemeralVolume("volume", host = Some("/foo"))
       val volumeMount = VolumeMount(volume.name, "/bla")
       private val invalid = validPod.copy(
         volumes = Seq(volume, volume),
