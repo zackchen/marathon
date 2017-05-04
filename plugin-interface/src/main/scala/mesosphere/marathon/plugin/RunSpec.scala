@@ -148,7 +148,7 @@ trait PodVolumeSpec {
 /**
   * Pod volume witch a secret
   */
-trait PodSecretVolume extends PodVolumeSpec {
+trait PodSecretVolumeSpec extends PodVolumeSpec {
 
   val secret: Secret
 }
