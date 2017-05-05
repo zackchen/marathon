@@ -7,6 +7,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp }
 import mesosphere.marathon.core.deployment.DeploymentPlan
 
@@ -105,12 +106,21 @@ trait GroupManager {
     *              one can control, to stop a current deployment and start a new one.
     * @return the deployment plan which will be executed.
     */
-  def updateRoot(
+  final def updateRoot(
     id: PathId,
     fn: RootGroup => RootGroup,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan]
+    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = {
+    updateRootEither[Nothing](id, fn.andThen(Right(_)), version, force, toKill).map(_.right.get)(ExecutionContexts.callerThread)
+  }
+
+  def updateRootEither[T](
+    id: PathId,
+    fn: RootGroup => Either[T, RootGroup],
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false,
+    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]
 
   /**
     * Update application with given identifier and update function.
