@@ -6,7 +6,7 @@ package api.v2.validation
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, EnvVarSecret, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, PodSecretVolume, PodVolume, Resources, SecretDef, ShellCommand, TcpHealthCheck, VolumeMount }
+import mesosphere.marathon.raml.{ ArgvCommand, Artifact, CommandHealthCheck, Endpoint, FixedPodScalingPolicy, HealthCheck, HttpHealthCheck, Image, ImageType, Lifecycle, Network, NetworkMode, Pod, PodContainer, PodScalingPolicy, PodSecretVolume, PodVolume, Resources, ShellCommand, TcpHealthCheck, VolumeMount }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
 
@@ -191,7 +191,6 @@ trait PodsValidation {
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
-    pod.environment is envValidator(strictNameValidation = false, pod.environment.collect { case (key, EnvVarSecret(s: SecretDef)) => key -> s }, enabledFeatures)
     pod.volumes.collect { case sv: PodSecretVolume => sv } is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
       val names = volumeNames(volumes)
