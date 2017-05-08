@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.pod
 
-import mesosphere.marathon.plugin.{ PodVolumeSpec, VolumeMountSpec }
+import mesosphere.marathon.plugin.{ PodSecretVolumeSpec, PodVolumeSpec, VolumeMountSpec }
 import mesosphere.marathon.state.Secret
 
 sealed trait Volume extends Product with Serializable with PodVolumeSpec {
@@ -23,6 +23,6 @@ case class HostVolume(name: String, hostPath: String) extends Volume
 /**
   * A volume referring to an existing secret.
   */
-case class SecretVolume(name: String, secret: Secret) extends Volume
+case class SecretVolume(name: String, secret: Secret) extends Volume with PodSecretVolumeSpec
 
 case class VolumeMount(name: String, mountPath: String, readOnly: Option[Boolean] = None) extends VolumeMountSpec
