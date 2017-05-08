@@ -18,6 +18,7 @@ from shakedown import (masters, required_masters, public_agents, required_public
                         dcos_1_9, marthon_version_less_than)
 
 from datetime import timedelta
+from random import randint
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
@@ -27,16 +28,17 @@ def marathon_service_name():
     shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     yield 'marathon'
     shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
-    clear_marathon()
+    #clear_marathon()
 
 
 def setup_module(module):
     common.cluster_info()
-    clear_marathon()
+    #clear_marathon()
 
 
 def teardown_module(module):
-    clear_marathon()
+    None
+    #clear_marathon()
 
 ##################
 # Root specific tests
@@ -193,21 +195,25 @@ def test_external_volume():
             print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
 
 
-@pytest.mark.skip(reason="Not yet implemented in mesos")
 def test_app_secret_volume(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
-    if not is_enterprise_cli_package_installed():
-        install_enterprise_cli_package()
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
 
     secret_name, secret_value = secret_fixture
+    secret_normalized_name = secret_name.replace('/', '')
 
-    app_id = '{}/{}'.format(secret_name, uuid.uuid4().hex)
+    app_id = '/app-{}-{}'.format(secret_normalized_name, randint(100,999))
+
+    # In case you're wondering about the `cmd`: secrets are mounted via tmpfs inside
+    # the container and are not visible outside, hence the intermediate file
     app_def = {
         "id": app_id,
         "instances": 1,
         "cpus": 0.1,
         "mem": 64,
-        "cmd": "/opt/mesosphere/bin/python -m http.server $PORT_API",
+        "cmd": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".
+            format(secret_normalized_name, secret_normalized_name),
         "container": {
             "type": "MESOS",
             "volumes": [{
@@ -234,7 +240,7 @@ def test_app_secret_volume(secret_fixture):
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
     # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
-    cmd = "curl {}:{}/.secrets{}".format(host, port, secret_name)
+    cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
     run, data = shakedown.run_command_on_master(cmd)
 
     assert run, "{} did not succeed".format(cmd)
@@ -243,18 +249,18 @@ def test_app_secret_volume(secret_fixture):
 
 def test_app_secret_env_var(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
-    if not is_enterprise_cli_package_installed():
-        install_enterprise_cli_package()
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
 
     secret_name, secret_value = secret_fixture
 
-    app_id = '{}/{}'.format(secret_name, uuid.uuid4().hex)
+    app_id = '/app-{}-{}'.format(secret_name.replace('/', ''), randint(100,999))
     app_def = {
         "id": app_id,
         "instances": 1,
         "cpus": 0.1,
         "mem": 64,
-        "cmd": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret/env && /opt/mesosphere/bin/python -m http.server $PORT_API",
+        "cmd": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $PORT_API",
         "env": {
             "SECRET_ENV": {
                 "secret": {
@@ -279,16 +285,70 @@ def test_app_secret_env_var(secret_fixture):
 
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
-    cmd = "curl {}:{}/secret/env".format(host, port)
+    cmd = "curl {}:{}/secret-env".format(host, port)
     run, data = shakedown.run_command_on_master(cmd)
 
     assert run, "{} did not succeed".format(cmd)
-    assert data == secret_value
+    assert data.rstrip() == secret_value
+
+
+def test_pod_secret_env_var(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    # if not common.is_enterprise_cli_package_installed():
+    #     common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+
+    pod_id = '/pod-{}-{}'.format(secret_name.replace('/', ''), randint(100,999))
+
+    pod_def = {
+        "id": pod_id,
+        "containers": [{
+            "name": "container-1",
+            "resources": {
+                "cpus": 0.1,
+                "mem": 64
+            },
+            "exec": {
+                "command": {
+                    "shell": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $PORT_API"
+                }
+            }
+        }],
+        "env": {
+            "SECRET_ENV": {
+                "secret": {
+                    "source": secret_name
+                }
+            }
+        },
+        "networks": [{
+            "mode": "host"
+        }]
+    }
+
+    client = marathon.create_client()
+    try:
+        client.add_app(app_def)
+        shakedown.deployment_wait()
+
+        tasks = client.get_tasks(pod_id)
+        assert len(tasks) == 1
+
+        port = tasks[0]['ports'][0]
+        host = tasks[0]['host']
+        cmd = "curl {}:{}/secret-env".format(host, port)
+        run, data = shakedown.run_command_on_master(cmd)
+
+        assert run, "{} did not succeed".format(cmd)
+        assert data.rstrip() == secret_value
+    finally:
+        client.remove_app(pod_id)
 
 
 @pytest.fixture(scope="function")
 def secret_fixture():
-    secret_name = '/path/to/secret'
+    secret_name = '/mysecret'
     secret_value = 'super_secret_password'
     common.create_secret(secret_name, secret_value)
     yield secret_name, secret_value
