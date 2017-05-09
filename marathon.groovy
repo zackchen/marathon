@@ -285,7 +285,7 @@ def checkout_marathon() {
       sh(script: "git branch --contains $RELEASE_COMMIT")
       error "Cannot tag a release commit that is not in a release branch."
     }
-    if (sh(script: "git tag | grep $RELEASE_TAG").trim() != "") {
+    if (sh(script: "git tag", returnStdout: true).contains("$RELEASE_TAG")) {
       error "Cannot reuse an exisiting tag."
     }
     // tag and sign the tag.
