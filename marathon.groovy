@@ -13,8 +13,11 @@ def gitTag() {
 }
 
 def gitBranch() {
-  if (GITBRANCH == "") {
+  if (GITBRANCH == "" && env.BRANCH_NAME != "") {
+    // multibranch builds mysteriously don't have the symbolic git refs (e.g. master)
     GITBRANCH = env.BRANCH_NAME
+  } else {
+    GITBRANCH = sh(script: "git symbolic-ref HEAD", returnStdout: true).trim()
   }
   return GITBRANCH
 }
@@ -37,6 +40,11 @@ def is_release_build() {
   } else if (env.BRANCH_NAME.startsWith("releases/")) {
     return true
   }
+}
+
+def is_release_tag() {
+  return RELEASE_BRANCH != "" && RELEASE_COMMIT != "" &&
+      RELEASE_BRANCH.matches("v\d+\.\d+\.\d+(-.*)?")
 }
 
 def ignore_error(block) {
@@ -206,6 +214,17 @@ def report_failure() {
     ]
     ]
     ])
+  } else if {
+    if (is_release_tag()) {
+      // we can safely delete the tag _even_ if it was already an existing tag on the origin since we'll just repull
+      // the tags later.
+      sh "git tag -d $RELEASE_TAG || true"
+      slackSend(
+          message: "\u2718 Failed to create release tag $RELEASE_TAG for $RELEASE_COMMIT",
+          color: "warning",
+          channel: "#marathon-dev",
+          tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
+    }
   }
 }
 
@@ -259,6 +278,22 @@ def checkout_marathon() {
       phabricator_apply_diff("$PHID", "$BUILD_URL", "$REVISION_ID", "$DIFF_ID")
       clean_git()
     }
+  } else if (is_release_tag()) {
+    setBuildInfo("Tag $RELEASE_TAG to $RELEASE_COMMIT")
+    git changelog: false, credentialsId: '4ff09dce-407b-41d3-847a-9e6609dd91b8', poll: false, url: 'git@github.com:mesosphere/marathon.git'
+    sh "git checkout $RELEASE_COMMIT"
+    if (!sh(script: "git branch --contains $RELEASE_COMMIT", returnStdout: true).contains("releases/")) {
+      error "Cannot tag a release commit that is not in a release branch."
+    }
+    if (sh(script: "git tag | grep $RELEASE_TAG").trim() != "") {
+      error "Cannot reuse an exisiting tag."
+    }
+    // tag and sign the tag.
+    sh """git config user.name "Mesosphere CI Robot" && \
+          git config user.email "mesosphere-ci@users.noreply.github.com" &&\
+          git config user.signingkey 32725FF3 &&\
+          git tag -s $RELEASE_TAG $RELEASE_COMMIT -m "Releasing $RELEASE_TAG" """
+    clean_git()
   } else {
     checkout scm
     gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
@@ -487,6 +522,12 @@ def build_marathon() {
       archive_artifacts()
     }
     stage_with_commit_status("Publish Binaries") {
+      if (is_release_tag()) {
+        // push the tag before publishing if we're doing a tagged release.
+        sshagent(['mesosphere-ci-github']) {
+          sh '''git push origin --tags'''
+        }
+      }
       publish_artifacts()
     }
     stage_with_commit_status("Unstable Tests") {

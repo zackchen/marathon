@@ -5,10 +5,12 @@ properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKe
     [$class: 'GitLabConnectionProperty', gitLabConnection: ''],
     [$class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false],
     parameters([string(defaultValue: 'master', description: 'Branch to locate marathon.groovy from. This facilitates testing changes to the pipeline.', name: 'GROOVY_BRANCH'),
-        string(defaultValue: '', description: 'Phabricator Revision, e.g. D730 => 730, required for Phabricator and Submit Builds', name: 'REVISION_ID'),
-        string(defaultValue: '', description: 'Phabricator Harbormaster object ID, required for Phabricator Builds', name: 'PHID'),
-        string(defaultValue: '', description: 'Diff ID to build (which diff of D730, for example), required for Phabricator Builds', name: 'DIFF_ID'),
+        string(defaultValue: '', description: 'Phabricator Revision, e.g. D730 => 730, required for Phabricator and Submit Builds. Filled in automatically by Phabricator and bin/submit-patch.', name: 'REVISION_ID'),
+        string(defaultValue: '', description: 'Phabricator Harbormaster object ID, required for Phabricator Builds. Filled in automatically by phabricator builds.', name: 'PHID'),
+        string(defaultValue: '', description: 'Diff ID to build (which diff of D730, for example), required for Phabricator Builds. Filled in automatically by phabricator builds.', name: 'DIFF_ID'),
         string(defaultValue: '', description: 'Branch to land on (required for submit builds)', name: 'TARGET_BRANCH'),
+        string(defaultValue: '', description: 'Release tag, e.g. v1.5.0-RC1. Only required for release-tag builds.', name: 'RELEASE_TAG'),
+        string(defaultValue: '', description: 'Commit hash to tag. Only required for release-tag builds. The commit must be on a release branch.', name: "RELEASE_COMMIT"),
         booleanParam(defaultValue: false, description: 'Publish a snapshot to S3. Always true for master/release, enable explicitly for phabricator builds.', name: 'PUBLISH_SNAPSHOT')]),
     pipelineTriggers([])])
 
