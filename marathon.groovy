@@ -287,8 +287,7 @@ def checkout_marathon() {
     // need to checkout all the release branches to be able to check if we're building a commit that is on a release branch.
     checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: '*/releases/.*']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'mesosphere-ci-github', url: 'git@github.com:mesosphere/marathon.git']]]
     sh "git checkout $RELEASE_COMMIT"
-    if (sh(script: "git branch --contains $RELEASE_COMMIT", returnStdout: true).contains("releases/")) {
-      sh(script: "git branch --contains $RELEASE_COMMIT")
+    if (!sh(script: "git branch --contains $RELEASE_COMMIT", returnStdout: true).startsWith("releases/")) {
       error "Cannot tag a release commit that is not in a release branch."
     }
     if (sh(script: "git tag", returnStdout: true).contains("$RELEASE_TAG")) {
@@ -536,6 +535,11 @@ def build_marathon() {
     }
     stage_with_commit_status("Publish Binaries") {
       if (is_release_tag()) {
+        slackSend(
+            message: "？ Waiting for approval to release $RELEASE_TAG @ $RELEASE_COMMIT (<${env.BUILD_URL}|Open>)",
+            color: "good",
+            channel: "#marathon-dev",
+            tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
         input "Are you sure you're ready to push the tag and all artifacts for $RELEASE_TAG @ $RELEASE_COMMIT?"
         // push the tag before publishing if we're doing a tagged release.
         sshagent(['mesosphere-ci-github']) {
