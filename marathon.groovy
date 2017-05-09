@@ -161,6 +161,12 @@ def report_success() {
     } catch (Exception err) {
       phabricator("differential.revision.edit", """ transactions: [{type: "comment", value: "\u2174 Build of $DIFF_ID completed at $BUILD_URL"}], objectIdentifier: "D$REVISION_ID" """)
     }
+  } else if (is_release_tag()) {
+    slackSend(
+        message: "\u2714 Created release $RELEASE_TAG @ $RELEASE_COMMIT (<${env.BUILD_URL}|Open>)",
+        color: "good",
+        channel: "#marathon-dev",
+        tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
   } else {
     if (is_master_or_release()) {
       if (previousBuildFailed()) {
@@ -198,11 +204,11 @@ def report_failure() {
     // we can safely delete the tag _even_ if it was already an existing tag on the origin since we'll just repull
     // the tags later.
     sh "git tag -d $RELEASE_TAG || true"
-    /*slackSend(
-        message: "\u2718 Failed to create release tag $RELEASE_TAG for $RELEASE_COMMIT",
+    slackSend(
+        message: "\u2718 Failed to create release tag $RELEASE_TAG for $RELEASE_COMMIT (<${env.BUILD_URL}|Open>)",
         color: "warning",
         channel: "#marathon-dev",
-        tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")*/
+        tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
   } else {
     if (is_master_or_release()) {
       slackSend(
