@@ -44,7 +44,7 @@ def is_release_build() {
 
 def is_release_tag() {
   return RELEASE_BRANCH != "" && RELEASE_COMMIT != "" &&
-      RELEASE_BRANCH.matches("v\d+\.\d+\.\d+(-.*)?")
+      RELEASE_BRANCH.matches("v\\d+\\.\\d+\\.\\d+(-.*)?")
 }
 
 def ignore_error(block) {
