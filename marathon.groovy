@@ -289,6 +289,10 @@ def checkout_marathon() {
       error "Cannot reuse an exisiting tag."
     }
     // tag and sign the tag.
+    configFileProvider([configFile(fileId: 'a7a9bcc5-5db0-40c3-a8dd-6ab52e2ccadd', targetLocation: '/home/admin/.gnupg/privatekey.tmp')]) {
+      // Don't fail if the key is already imported.
+      sh "gpg --import /home/admin/.gnupg/privatekey.tmp || true"
+    }
     sh """git config user.name "Mesosphere CI Robot" && \
           git config user.email "mesosphere-ci@users.noreply.github.com" &&\
           git config user.signingkey 32725FF3 &&\
@@ -503,6 +507,9 @@ def archive_artifacts() {
 
 def build_marathon() {
   try {
+    stage("Checkout") {
+      checkout_marathon()
+    }
     stage("Kill Junk") {
       kill_junk()
     }
