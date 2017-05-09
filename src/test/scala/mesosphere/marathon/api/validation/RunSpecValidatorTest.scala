@@ -603,9 +603,9 @@ class RunSpecValidatorTest extends UnitTest {
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
       val config = AppNormalization.Configure(None, "bridge-name")
       val result = validAppDefinition(Raml.fromRaml(
-        AppNormalization(config).normalized(
+        AppNormalization(config).normalizedOrThrow(
           validateOrThrow(
-            AppNormalization.forDeprecated(config).normalized(app)))))
+            AppNormalization.forDeprecated(config).normalizedOrThrow(app)))))
       result.isSuccess shouldBe true
     }
 
@@ -616,9 +616,9 @@ class RunSpecValidatorTest extends UnitTest {
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
       val config = AppNormalization.Configure(None, "bridge-name")
       val result = validAppDefinition(Raml.fromRaml(
-        AppNormalization(config).normalized(
+        AppNormalization(config).normalizedOrThrow(
           validateOrThrow(
-            AppNormalization.forDeprecated(config).normalized(app)))))
+            AppNormalization.forDeprecated(config).normalizedOrThrow(app)))))
       withClue(result) {
         result.isSuccess shouldBe true
       }

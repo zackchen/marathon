@@ -2,6 +2,8 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo }
+import stream.RichEither
+import com.wix.accord.Failure
 
 trait GroupConversion {
 
@@ -40,29 +42,40 @@ case class UpdateGroupStructureOp(
 
 object UpdateGroupStructureOp {
 
+  import RichEither.RightBiased
   import Normalization._
 
   private def requireGroupPath(groupUpdate: GroupUpdate)(implicit normalPaths: Normalization[PathId]): PathId = {
-    groupUpdate.id.map(PathId(_).normalize).getOrElse(
+    groupUpdate.id.map(PathId(_).normalizeOrThrow).getOrElse(
       // validation should catch this..
       throw SerializationFailedException("No group id was given!")
     )
   }
 
   private def normalizeApp(version: Timestamp)(implicit normalPaths: Normalization[PathId]): Normalization[AppDefinition] = Normalization { app =>
-    app.copy(id = app.id.normalize, dependencies = app.dependencies.map(_.normalize),
-      versionInfo = CoreVersionInfo.OnlyVersion(version))
+    for {
+      appId <- app.id.normalize
+
+      dependencies <- RichEither.sequence(app.dependencies.map(_.normalize)).left.map { failures =>
+        Failure(failures.flatMap(_.violations))
+      }
+    } yield {
+      app.copy(id = appId, dependencies = dependencies,
+        versionInfo = CoreVersionInfo.OnlyVersion(version))
+    }
   }
 
   /**
     * Creates a new [[state.Group]] from a [[GroupUpdate]], performing both normalization and conversion.
     */
   private def createGroup(groupUpdate: GroupUpdate, gid: PathId, version: Timestamp)(implicit cf: App => AppDefinition): CoreGroup = {
-    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(gid))
+    implicit val pathNormalization: Normalization[PathId] = Normalization { g =>
+      Right(g.canonicalPath(gid))
+    }
     implicit val appNormalization = normalizeApp(version)
 
     val appsById: Map[AppDefinition.AppKey, AppDefinition] = groupUpdate.apps.getOrElse(Set.empty).map { currentApp =>
-      val app = cf(currentApp).normalize
+      val app = cf(currentApp).normalizeOrThrow
       app.id -> app
     }(collection.breakOut)
 
@@ -77,7 +90,7 @@ object UpdateGroupStructureOp {
       apps = appsById,
       pods = Map.empty,
       groupsById = groupsById,
-      dependencies = groupUpdate.dependencies.fold(Set.empty[PathId])(_.map(PathId(_).normalize)),
+      dependencies = groupUpdate.dependencies.fold(Set.empty[PathId])(_.map(PathId(_).normalizeOrThrow)),
       version = version,
       transitiveAppsById = appsById ++ groupsById.values.flatMap(_.transitiveAppsById),
       transitivePodsById = Map.empty // we don't support updates to pods via group-update operations
@@ -97,7 +110,9 @@ object UpdateGroupStructureOp {
     require(groupUpdate.scaleBy.isEmpty, "For a structural update, no scale should be given.")
     require(groupUpdate.version.isEmpty, "For a structural update, no version should be given.")
 
-    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
+    implicit val pathNormalization: Normalization[PathId] = Normalization { path =>
+      Right(path.canonicalPath(current.id))
+    }
     implicit val appNormalization = normalizeApp(timestamp)
 
     val effectiveGroups: Map[PathId, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
@@ -113,12 +128,12 @@ object UpdateGroupStructureOp {
 
     val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] = {
       groupUpdate.apps.map(_.map(cf)).getOrElse(current.apps.values).map { currentApp =>
-        val app = currentApp.normalize
+        val app = currentApp.normalizeOrThrow
         app.id -> app
       }(collection.breakOut)
     }
 
-    val effectiveDependencies = groupUpdate.dependencies.fold(current.dependencies)(_.map(PathId(_).normalize))
+    val effectiveDependencies = groupUpdate.dependencies.fold(current.dependencies)(_.map(PathId(_).normalizeOrThrow))
 
     CoreGroup(
       id = current.id,

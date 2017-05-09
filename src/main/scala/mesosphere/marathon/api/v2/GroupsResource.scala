@@ -143,7 +143,7 @@ class GroupsResource @Inject() (
 
     // convert apps to canonical form here
     val apps = update.apps.map(_.map { a =>
-      a.copy(id = a.id.toPath.canonicalPath(basePath).toString).normalize
+      a.copy(id = a.id.toPath.canonicalPath(basePath).toString).normalizeOrThrow
     })
 
     val groups = update.groups.map(_.map { g =>

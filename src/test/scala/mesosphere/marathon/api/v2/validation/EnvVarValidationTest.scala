@@ -31,7 +31,7 @@ class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationT
       behave like compliantEnv("numerical env", Environment("9" -> "x"), strictNameValidation = false)
 
       "fail with a numerical env variable name" in new WithoutSecrets {
-        validate(Wrapper(Environment("9" -> "x"))).normalize should failWith("/env(9)" -> MustContainOnlyAlphanumeric)
+        validate(Wrapper(Environment("9" -> "x"))).normalizeOrThrow should failWith("/env(9)" -> MustContainOnlyAlphanumeric)
       }
 
       def failsWhenExpected(subtitle: String, strictNameValidation: Boolean): Unit = {
@@ -41,12 +41,12 @@ class EnvVarValidationTest extends UnitTest with ResultMatchers with ValidationT
             if (strictNameValidation) alwaysExpected ++ (Seq[ViolationMatcher]("/env()" -> MustContainOnlyAlphanumeric))
             else alwaysExpected
 
-          validate(Wrapper(Environment("" -> "x"))).normalize should failWith(expectedNow: _*)
+          validate(Wrapper(Environment("" -> "x"))).normalizeOrThrow should failWith(expectedNow: _*)
         }
 
         s"fail with too long variable name $subtitle" in new WithoutSecrets(strictNameValidation) {
           val name = ("x" * 255)
-          val result = validate(Wrapper(Environment(name -> "x"))).normalize
+          val result = validate(Wrapper(Environment(name -> "x"))).normalizeOrThrow
           if (strictNameValidation) {
             result should failWith(s"/env($name)" -> MustContainOnlyAlphanumeric)
           } else {

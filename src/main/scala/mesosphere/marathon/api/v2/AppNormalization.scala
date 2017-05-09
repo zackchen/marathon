@@ -1,10 +1,13 @@
 package mesosphere.marathon
 package api.v2
 
+import com.wix.accord.{ Failure, RuleViolation }
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ FetchUri, PathId }
+import mesosphere.marathon.stream.RichEither
 
 object AppNormalization {
+  import RichEither.RightBiased
 
   import Apps._
   import Normalization._
@@ -21,10 +24,10 @@ object AppNormalization {
       if (needsDefaultPortIndex) check.copy(portIndex = Some(0)) else check
     }
 
-    healthChecks.map {
+    Right(healthChecks.map {
       case check: AppHealthCheck if check.protocol != AppHealthCheckProtocol.Command => withPort(check)
       case check => check
-    }
+    })
   }
 
   case class Artifacts(uris: Option[Seq[String]], fetch: Option[Seq[Artifact]])
@@ -33,10 +36,10 @@ object AppNormalization {
     implicit val normalizeFetch: Normalization[Artifacts] = Normalization { n =>
       (n.uris, n.fetch) match {
         case (Some(uris), fetch) if uris.nonEmpty && fetch.fold(true)(_.isEmpty) =>
-          n.copy(fetch = Some(uris.map(uri => Artifact(uri = uri, extract = FetchUri.isExtract(uri)))))
+          Right(n.copy(fetch = Some(uris.map(uri => Artifact(uri = uri, extract = FetchUri.isExtract(uri))))))
         case (Some(uris), Some(fetch)) if uris.nonEmpty && fetch.nonEmpty =>
-          throw SerializationFailedException("cannot specify both uris and fetch fields")
-        case _ => n
+          Left(Failure(Set(RuleViolation(n, constraint = "cannot specify both uris and fetch fields", None))))
+        case _ => Right(n)
       }
     }
   }
@@ -121,7 +124,7 @@ object AppNormalization {
             }
         )
       }
-      n.copy(container = newContainer)
+      Right(n.copy(container = newContainer))
     }
   }
 
@@ -132,55 +135,71 @@ object AppNormalization {
     * @return an API object in canonical form (read: doesn't use deprecated APIs)
     */
   def forDeprecatedUpdates(config: Config): Normalization[AppUpdate] = Normalization { update =>
-    val fetch = Artifacts(update.uris, update.fetch).normalize.fetch
 
-    val networks = NetworkTranslation(
-      update.ipAddress,
-      update.container.flatMap(_.docker.flatMap(_.network)),
-      update.networks,
-      config
-    ).normalize.networks
+    for {
+      artifacts <- Artifacts(update.uris, update.fetch).normalize
 
-    // no container specified in JSON but ipAddress is ==> implies empty Mesos container
-    val container = update.container.orElse(update.ipAddress.map(_ => Container(EngineType.Mesos))).map { c =>
-      // we explicitly make the decision here to not try implementing default port-mappings.
-      // after applying the app-update to an app, the system should normalize the app definition -- and at that
-      // point we'll calculate defaults if needed.
-      dropDockerNetworks(
-        migrateIpDiscovery(
-          migrateDockerPortMappings(c),
-          update.ipAddress.flatMap(_.discovery)
+      networkTranslation <- NetworkTranslation(
+        update.ipAddress,
+        update.container.flatMap(_.docker.flatMap(_.network)),
+        update.networks,
+        config
+      ).normalize
+
+      healthChecks <- {
+        update.healthChecks match {
+          case Some(healthChecks) =>
+            healthChecks.normalize.right.map(Some(_))
+          case None =>
+            Right(None)
+        }
+      }
+    } yield {
+
+      // no container specified in JSON but ipAddress is ==> implies empty Mesos container
+      val container = update.container.orElse(update.ipAddress.map(_ => Container(EngineType.Mesos))).map { c =>
+        // we explicitly make the decision here to not try implementing default port-mappings.
+        // after applying the app-update to an app, the system should normalize the app definition -- and at that
+        // point we'll calculate defaults if needed.
+        dropDockerNetworks(
+          migrateIpDiscovery(
+            migrateDockerPortMappings(c),
+            update.ipAddress.flatMap(_.discovery)
+          )
         )
+      }
+
+      // no default port calculations, as per the port-mappings comment above.
+      val portDefinitions = update.portDefinitions.orElse(
+        update.ports.map(_.map(port => PortDefinition(port))))
+
+      val hi = update.healthChecks.map(_.normalize)
+
+      update.copy(
+        // normalize fetch
+        fetch = artifacts.fetch,
+        uris = None,
+        // normalize networks
+        networks = networkTranslation.networks,
+        ipAddress = None,
+        container = container,
+        // ports
+        portDefinitions = portDefinitions,
+        ports = None,
+        // health checks
+        healthChecks = healthChecks,
+        readinessChecks = update.readinessChecks.map(_.map(normalizeReadinessCheck))
       )
     }
-
-    // no default port calculations, as per the port-mappings comment above.
-    val portDefinitions = update.portDefinitions.orElse(
-      update.ports.map(_.map(port => PortDefinition(port))))
-
-    update.copy(
-      // normalize fetch
-      fetch = fetch,
-      uris = None,
-      // normalize networks
-      networks = networks,
-      ipAddress = None,
-      container = container,
-      // ports
-      portDefinitions = portDefinitions,
-      ports = None,
-      // health checks
-      healthChecks = update.healthChecks.map(_.normalize),
-      readinessChecks = update.readinessChecks.map(_.map(normalizeReadinessCheck))
-    )
   }
 
   def forUpdates(config: Config): Normalization[AppUpdate] = Normalization { update =>
-    val networks = Networks(config, update.networks).normalize.networks
-    val container = NetworkedContainer(update.networks, update.container).normalize.container
-    update.copy(
-      container = container,
-      networks = networks
+    for {
+      networks <- Networks(config, update.networks).normalize
+      container <- NetworkedContainer(update.networks, update.container).normalize
+    } yield update.copy(
+      container = container.container,
+      networks = networks.networks
     )
   }
 
@@ -219,72 +238,78 @@ object AppNormalization {
     * @return an API object in canonical form (read: doesn't use deprecated APIs)
     */
   def forDeprecated(config: Config): Normalization[App] = Normalization { app =>
-    import state.PathId._
-    val fetch: Seq[Artifact] = Artifacts(app.uris, Option(app.fetch)).normalize.fetch.getOrElse(Nil)
+    for {
+      artifacts <- Artifacts(app.uris, Option(app.fetch)).normalize
+      networkTranslation <- NetworkTranslation(
+        app.ipAddress,
+        app.container.flatMap(_.docker.flatMap(_.network)),
+        if (app.networks.isEmpty) None else Some(app.networks),
+        config
+      ).normalize
 
-    val networks: Seq[Network] = NetworkTranslation(
-      app.ipAddress,
-      app.container.flatMap(_.docker.flatMap(_.network)),
-      if (app.networks.isEmpty) None else Some(app.networks),
-      config
-    ).normalize.networks.getOrElse(Nil)
+      networks = networkTranslation.networks.getOrElse(Nil)
 
-    // canonical validation doesn't allow both portDefinitions and container.portMappings:
-    // container and portDefinitions normalization (below) deal with dropping unsupported port configs.
-
-    // may need to expand port mappings based on number of declared port definitions, so figure this out first
-    val migratedPortDefinitions = migratePortDefinitions(app)
-    val portDefinitions = applyDefaultPortDefinitions(migratedPortDefinitions, networks)
-
-    val container = app.container.orElse(
-      // no container specified in JSON but ipAddress is ==> implies empty Mesos container
-      app.ipAddress.map(_ => Container(EngineType.Mesos))
-    ).map { c =>
-        // the ordering of the rules here is very important; think twice before rearranging, then think again
-        maybeAddPortMappings(
-          applyDefaultPortMappings(
-            maybeDropPortMappings(
-              dropDockerNetworks(
-                migrateIpDiscovery(
-                  migrateDockerPortMappings(c),
-                  app.ipAddress.flatMap(_.discovery)
-                )
+      migratedPortDefinitions = migratePortDefinitions(app)
+      container = app.container.orElse(
+        // no container specified in JSON but ipAddress is ==> implies empty Mesos container
+        app.ipAddress.map(_ => Container(EngineType.Mesos))
+      ).map { c =>
+          // the ordering of the rules here is very important; think twice before rearranging, then think again
+          maybeAddPortMappings(
+            applyDefaultPortMappings(
+              maybeDropPortMappings(
+                dropDockerNetworks(
+                  migrateIpDiscovery(
+                    migrateDockerPortMappings(c),
+                    app.ipAddress.flatMap(_.discovery)
+                  )
+                ), networks
               ), networks
-            ), networks
-          ), networks, migratedPortDefinitions
-        )
+            ), networks, migratedPortDefinitions
+          )
+        }
+
+      healthChecks <- {
+        // for an app (not an update) only normalize if there are ports defined somewhere.
+        // ??? intentionally consider the non-normalized portDefinitions since that's what the old Formats code did
+        if (app.portDefinitions.exists(_.nonEmpty) || container.exists(_.portMappings.nonEmpty)) app.healthChecks.normalize
+        else Right(app.healthChecks)
       }
+    } yield {
+      import state.PathId._
+      val fetch: Seq[Artifact] = artifacts.fetch.getOrElse(Nil)
 
-    val healthChecks =
-      // for an app (not an update) only normalize if there are ports defined somewhere.
-      // ??? intentionally consider the non-normalized portDefinitions since that's what the old Formats code did
-      if (app.portDefinitions.exists(_.nonEmpty) || container.exists(_.portMappings.nonEmpty)) app.healthChecks.normalize
-      else app.healthChecks
+      // canonical validation doesn't allow both portDefinitions and container.portMappings:
+      // container and portDefinitions normalization (below) deal with dropping unsupported port configs.
 
-    // cheating: we know that this is invoked before canonical validation so we provide a default here.
-    // it would be nice to use RAML "object" default values here but our generator isn't that smart yet.
-    val residency: Option[AppResidency] = app.container.find(_.volumes.exists(_.persistent.nonEmpty))
-      .fold(app.residency)(_ => app.residency.orElse(DefaultAppResidency))
+      // may need to expand port mappings based on number of declared port definitions, so figure this out first
+      val portDefinitions = applyDefaultPortDefinitions(migratedPortDefinitions, networks)
 
-    app.copy(
-      // it's kind of cheating to do this here, but its required in order to pass canonical validation (that happens
-      // before canonical normalization)
-      id = app.id.toRootPath.toString,
-      // normalize fetch
-      fetch = fetch,
-      uris = None,
-      // normalize networks
-      networks = networks,
-      ipAddress = None,
-      container = container,
-      // normalize ports
-      portDefinitions = portDefinitions,
-      ports = None,
-      // and the rest (simple)
-      healthChecks = healthChecks,
-      residency = residency,
-      readinessChecks = app.readinessChecks.map(normalizeReadinessCheck)
-    )
+      // cheating: we know that this is invoked before canonical validation so we provide a default here.
+      // it would be nice to use RAML "object" default values here but our generator isn't that smart yet.
+      val residency: Option[AppResidency] = app.container.find(_.volumes.exists(_.persistent.nonEmpty))
+        .fold(app.residency)(_ => app.residency.orElse(DefaultAppResidency))
+
+      app.copy(
+        // it's kind of cheating to do this here, but its required in order to pass canonical validation (that happens
+        // before canonical normalization)
+        id = app.id.toRootPath.toString,
+        // normalize fetch
+        fetch = fetch,
+        uris = None,
+        // normalize networks
+        networks = networks,
+        ipAddress = None,
+        container = container,
+        // normalize ports
+        portDefinitions = portDefinitions,
+        ports = None,
+        // and the rest (simple)
+        healthChecks = healthChecks,
+        residency = residency,
+        readinessChecks = app.readinessChecks.map(normalizeReadinessCheck)
+      )
+    }
   }
 
   case class Networks(config: Config, networks: Option[Seq[Network]])
@@ -292,33 +317,37 @@ object AppNormalization {
   object Networks {
     implicit val normalizedNetworks: Normalization[Networks] = Normalization { n =>
       // IMPORTANT: only evaluate config.defaultNetworkName if we actually need it
-      n.copy(networks = n.networks.map{ networks =>
+      Right(n.copy(networks = n.networks.map{ networks =>
         networks.map {
           case x: Network if x.name.isEmpty && x.mode == NetworkMode.Container => x.copy(name = n.config.defaultNetworkName)
           case x => x
         }
-      })
+      }))
     }
   }
 
   def apply(config: Config): Normalization[App] = Normalization { app =>
-    val networks = Networks(config, Some(app.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
-    val container = NetworkedContainer(Some(networks), app.container).normalize.container
+    for {
+      networksObj <- Networks(config, Some(app.networks)).normalize
+      networks = networksObj.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
+      container <- NetworkedContainer(Some(networks), app.container).normalize
 
-    val defaultUnreachable: UnreachableStrategy = {
-      val hasPersistentVols = app.container.exists(_.volumes.exists(_.persistent.nonEmpty))
-      state.UnreachableStrategy.default(hasPersistentVols).toRaml
+    } yield {
+
+      val defaultUnreachable: UnreachableStrategy = {
+        val hasPersistentVols = app.container.exists(_.volumes.exists(_.persistent.nonEmpty))
+        state.UnreachableStrategy.default(hasPersistentVols).toRaml
+      }
+
+      // requirePorts only applies for host-mode networking
+      val requirePorts = networks.find(_.mode != NetworkMode.Host).fold(app.requirePorts)(_ => false)
+
+      app.copy(
+        container = container.container,
+        networks = networks,
+        unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
+        requirePorts = requirePorts)
     }
-
-    // requirePorts only applies for host-mode networking
-    val requirePorts = networks.find(_.mode != NetworkMode.Host).fold(app.requirePorts)(_ => false)
-
-    app.copy(
-      container = container,
-      networks = networks,
-      unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
-      requirePorts = requirePorts
-    )
   }
 
   /** dynamic app normalization configuration, useful for migration and/or testing */
@@ -343,63 +372,63 @@ object AppNormalization {
     config: Config)
 
   object NetworkTranslation {
+    import DockerNetwork.{ Host, User, Bridge }
     implicit val normalizedNetworks: Normalization[NetworkTranslation] = Normalization { nt =>
-      val networks = toNetworks(nt)
-      nt.copy(networks = networks)
+      toNetworks(nt).right.map { networks =>
+        nt.copy(networks = networks)
+      }
     }
 
-    private[this] def toNetworks(nt: NetworkTranslation): Option[Seq[Network]] = nt match {
+    private[this] def toNetworks(nt: NetworkTranslation): Either[Failure, Option[Seq[Network]]] = nt match {
       case NetworkTranslation(Some(ipAddress), Some(networkType), None, _) =>
         // wants ip/ct with a specific network mode
-        import DockerNetwork._
         networkType match {
           case Host =>
-            Some(Seq(Network(mode = NetworkMode.Host))) // strange way to ask for this, but we'll accommodate
+            Right(Some(Seq(Network(mode = NetworkMode.Host)))) // strange way to ask for this, but we'll accommodate
           case User =>
-            Some(Seq(Network(mode = NetworkMode.Container, name = ipAddress.networkName, labels = ipAddress.labels)))
+            Right(Some(Seq(Network(mode = NetworkMode.Container, name = ipAddress.networkName, labels = ipAddress.labels))))
           case Bridge =>
-            Some(Seq(Network(mode = NetworkMode.ContainerBridge, labels = ipAddress.labels)))
+            Right(Some(Seq(Network(mode = NetworkMode.ContainerBridge, labels = ipAddress.labels))))
           case unsupported =>
-            throw SerializationFailedException(s"unsupported docker network type $unsupported")
+            Left(Failure(Set(RuleViolation(nt, s"unsupported docker network type $unsupported", None))))
         }
       case NetworkTranslation(Some(ipAddress), None, None, config) =>
         // wants ip/ct with some network mode.
         // if the user gave us a name try to figure out what they want.
         ipAddress.networkName match {
           case Some(name) if name == config.mesosBridgeName => // users shouldn't do this, but we're tolerant
-            Some(Seq(Network(mode = NetworkMode.ContainerBridge, labels = ipAddress.labels)))
+            Right(Some(Seq(Network(mode = NetworkMode.ContainerBridge, labels = ipAddress.labels))))
           case name =>
-            Some(Seq(Network(mode = NetworkMode.Container, name = name, labels = ipAddress.labels)))
+            Right(Some(Seq(Network(mode = NetworkMode.Container, name = name, labels = ipAddress.labels))))
         }
       case NetworkTranslation(None, Some(networkType), None, _) =>
         // user didn't ask for IP-per-CT, but specified a network type anyway
-        import DockerNetwork._
         networkType match {
-          case Host => Some(Seq(Network(mode = NetworkMode.Host)))
-          case User => Some(Seq(Network(mode = NetworkMode.Container)))
-          case Bridge => Some(Seq(Network(mode = NetworkMode.ContainerBridge)))
+          case Host => Right(Some(Seq(Network(mode = NetworkMode.Host))))
+          case User => Right(Some(Seq(Network(mode = NetworkMode.Container))))
+          case Bridge => Right(Some(Seq(Network(mode = NetworkMode.ContainerBridge))))
           case unsupported =>
-            throw SerializationFailedException(s"unsupported docker network type $unsupported")
+            Left(Failure(Set(RuleViolation(networkType, s"unsupported docker network type $unsupported", None))))
         }
       case NetworkTranslation(None, None, networks, _) =>
         // no deprecated APIs used! awesome, so use the canonical networks field
-        networks
+        Right(networks)
       case _ =>
-        throw SerializationFailedException("cannot mix deprecated and canonical network APIs")
+        Left(Failure(Set(RuleViolation(nt, "cannot mix deprecated and canonical network APIs", None))))
     }
   }
   @SuppressWarnings(Array("AsInstanceOf"))
   def withCanonizedIds[T](base: PathId = PathId.empty): Normalization[T] = Normalization {
     case update: AppUpdate =>
-      update.copy(
+      Right(update.copy(
         id = update.id.map(id => PathId(id).canonicalPath(base).toString),
         dependencies = update.dependencies.map(_.map(dep => PathId(dep).canonicalPath(base).toString))
-      ).asInstanceOf[T]
+      ).asInstanceOf[T])
     case app: App =>
-      app.copy(
+      Right(app.copy(
         id = PathId(app.id).canonicalPath(base).toString,
         dependencies = app.dependencies.map(dep => PathId(dep).canonicalPath(base).toString)
-      ).asInstanceOf[T]
+      ).asInstanceOf[T])
     case _ => throw SerializationFailedException("withCanonizedIds only applies for App and AppUpdate")
   }
 }

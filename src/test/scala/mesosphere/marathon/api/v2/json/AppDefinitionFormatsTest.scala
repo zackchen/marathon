@@ -49,8 +49,8 @@ class AppDefinitionFormatsTest extends UnitTest
       // (like this code) reverses the order of validation and normalization
       Validation.validateOrThrow(
         AppNormalization.apply(config)
-          .normalized(Validation.validateOrThrow(
-            AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
+          .normalizedOrThrow(Validation.validateOrThrow(
+            AppNormalization.forDeprecated(config).normalizedOrThrow(app))(AppValidation.validateOldAppAPI)))(
           AppValidation.validateCanonicalAppAPI(Set.empty)
         )
     )

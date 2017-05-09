@@ -23,6 +23,12 @@ trait Validation {
     case f: Failure => throw ValidationFailedException(t, f)
   }
 
+  def validateOrLeft[T](t: T)(implicit validator: Validator[T]): Either[Failure, T] =
+    validate(t) match {
+      case Success => Right(t)
+      case f: Failure => Left(f)
+    }
+
   implicit def optional[T](implicit validator: Validator[T]): Validator[Option[T]] = {
     new Validator[Option[T]] {
       override def apply(option: Option[T]): Result = option.map(validator).getOrElse(Success)

@@ -49,8 +49,8 @@ trait ValidationTestLike extends Validation {
 
   protected implicit val normalizeResult: Normalization[Result] = Normalization {
     // normalize failures => human readable error messages
-    case f: Failure => Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
-    case x => x
+    case f: Failure => Right(Failure(f.violations.flatMap(allRuleViolationsWithFullDescription(_))))
+    case x => Right(x)
   }
 
   def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {

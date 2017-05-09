@@ -78,7 +78,7 @@ class AppsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
     assumeValid {
-      val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalize)
+      val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalizeOrThrow)
       val now = clock.now()
       val app = validateOrThrow(rawApp).copy(versionInfo = VersionInfo.OnlyVersion(now))
 
@@ -154,7 +154,7 @@ class AppsResource @Inject() (
     */
   def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], partialUpdate: Boolean): raml.AppUpdate = {
     if (partialUpdate) {
-      Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalize
+      Json.parse(body).as[raml.AppUpdate].copy(id = Some(appId.toString)).normalizeOrThrow
     } else {
       // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
       // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
@@ -162,7 +162,7 @@ class AppsResource @Inject() (
       // some hackery here to pass initial JSON parsing.
       val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
       // the version is thrown away in conversion to AppUpdate
-      jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+      jsObj.as[raml.App].normalizeOrThrow.toRaml[raml.AppUpdate]
     }
   }
 
@@ -176,13 +176,13 @@ class AppsResource @Inject() (
     */
   def canonicalAppUpdatesFromJson(body: Array[Byte], partialUpdate: Boolean): Seq[raml.AppUpdate] = {
     if (partialUpdate) {
-      Json.parse(body).as[Seq[raml.AppUpdate]].map(_.normalize)
+      Json.parse(body).as[Seq[raml.AppUpdate]].map(_.normalizeOrThrow)
     } else {
       // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
       // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
       // the version is thrown away in toUpdate so just pass `zero` for now.
       Json.parse(body).as[Seq[raml.App]].map { app =>
-        app.normalize.toRaml[raml.AppUpdate]
+        app.normalizeOrThrow.toRaml[raml.AppUpdate]
       }
     }
   }
@@ -340,7 +340,7 @@ class AppsResource @Inject() (
     partialUpdate: Boolean,
     allowCreation: Boolean)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
-      val app = withoutPriorAppDefinition(appUpdate, appId).normalize
+      val app = withoutPriorAppDefinition(appUpdate, appId).normalizeOrThrow
       // versionInfo doesn't change - it's never overridden by an AppUpdate.
       // the call to fromRaml loses the original versionInfo; it's just the current time in this case
       // so we just query for that (using a more predictable clock than AppDefinition has access to)
@@ -351,9 +351,9 @@ class AppsResource @Inject() (
     def updateApp(current: AppDefinition): AppDefinition = {
       val app =
         if (partialUpdate)
-          Raml.fromRaml(appUpdate -> current).normalize
+          Raml.fromRaml(appUpdate -> current).normalizeOrThrow
         else
-          withoutPriorAppDefinition(appUpdate, appId).normalize
+          withoutPriorAppDefinition(appUpdate, appId).normalizeOrThrow
 
       // versionInfo doesn't change - it's never overridden by an AppUpdate.
       // the call to fromRaml loses the original versionInfo; we take special care to preserve it
@@ -406,17 +406,20 @@ object AppsResource {
   case class NormalizationConfig(enabledFeatures: Set[String], config: AppNormalization.Config)
 
   def appNormalization(config: NormalizationConfig): Normalization[raml.App] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppAPI)
-    val migrated = AppNormalization.forDeprecated(config.config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures))
-    AppNormalization(config.config).normalized(migrated)
+    for {
+      _ <- validateOrLeft(app)(AppValidation.validateOldAppAPI).right
+      migrated <- AppNormalization.forDeprecated(config.config).normalized(app).right
+      _ <- validateOrLeft(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures)).right
+    } yield migrated
   }
 
   def appUpdateNormalization(config: NormalizationConfig): Normalization[raml.AppUpdate] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppUpdateAPI)
-    val migrated = AppNormalization.forDeprecatedUpdates(config.config).normalized(app)
-    validateOrThrow(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures))
-    AppNormalization.forUpdates(config.config).normalized(migrated)
+    for {
+      _ <- validateOrLeft(app)(AppValidation.validateOldAppUpdateAPI).right
+      migrated <- AppNormalization.forDeprecatedUpdates(config.config).normalized(app).right
+      _ <- validateOrLeft(app)(AppValidation.validateCanonicalAppUpdateAPI(config.enabledFeatures)).right
+      result <- AppNormalization.forUpdates(config.config).normalized(migrated).right
+    } yield result
   }
 
   def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector = Selector[AppDefinition] { app =>

@@ -32,7 +32,7 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
         val badApp = containerNetworkedApp(
           Seq(ContainerPortMapping(hostPort = Option(0))), networkCount = 2)
 
-        basicValidator(badApp).normalize should failWith(
+        basicValidator(badApp).normalizeOrThrow should failWith(
           "/container/portMappings(0)" ->
             AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks)
       }

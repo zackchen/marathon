@@ -30,21 +30,21 @@ class AppNormalizationTest extends UnitTest {
           check.port should be('empty)
           check.portIndex should be('empty)
 
-          val normalized = AppNormalization.normalizeHealthChecks.normalized(Set(check))
+          val normalized = AppNormalization.normalizeHealthChecks.normalizedOrThrow(Set(check))
           normalized should be(Set(check.copy(portIndex = Option(0))))
         }
         s"${check.protocol} health check w/ port spec isn't normalized" in {
           val checkWithPort = check.copy(port = Option(88))
           checkWithPort.portIndex should be('empty)
 
-          val normalized = AppNormalization.normalizeHealthChecks.normalized(Set(checkWithPort))
+          val normalized = AppNormalization.normalizeHealthChecks.normalizedOrThrow(Set(checkWithPort))
           normalized should be(Set(checkWithPort))
         }
         s"${check.protocol} health check w/ port index spec isn't normalized" in {
           val checkWithPort = check.copy(portIndex = Option(5))
           checkWithPort.port should be('empty)
 
-          val normalized = AppNormalization.normalizeHealthChecks.normalized(Set(checkWithPort))
+          val normalized = AppNormalization.normalizeHealthChecks.normalizedOrThrow(Set(checkWithPort))
           normalized should be(Set(checkWithPort))
         }
       }
@@ -58,40 +58,40 @@ class AppNormalizationTest extends UnitTest {
 
       "COMMAND health check isn't changed" in {
         val check = AppHealthCheck(protocol = AppHealthCheckProtocol.Command)
-        val normalized = AppNormalization.normalizeHealthChecks.normalized(Set(check))
+        val normalized = AppNormalization.normalizeHealthChecks.normalizedOrThrow(Set(check))
         normalized should be(Set(check))
       }
     }
 
     "normalize fetch and uris fields" when {
       "uris are present and fetch is not" in {
-        val urisNoFetch = AppNormalization.Artifacts(Option(Seq("a")), None).normalize.fetch
+        val urisNoFetch = AppNormalization.Artifacts(Option(Seq("a")), None).normalizeOrThrow.fetch
         val expected = Option(Seq(Artifact("a", extract = false)))
         urisNoFetch should be(expected)
       }
       "uris are present and fetch is an empty list" in {
-        val urisEmptyFetch = AppNormalization.Artifacts(Option(Seq("a")), Option(Nil)).normalize.fetch
+        val urisEmptyFetch = AppNormalization.Artifacts(Option(Seq("a")), Option(Nil)).normalizeOrThrow.fetch
         val expected = Option(Seq(Artifact("a", extract = false)))
         urisEmptyFetch should be(expected)
       }
       "fetch is present and uris are not" in {
-        val fetchNoUris = AppNormalization.Artifacts(None, Option(Seq(Artifact("a")))).normalize.fetch
+        val fetchNoUris = AppNormalization.Artifacts(None, Option(Seq(Artifact("a")))).normalizeOrThrow.fetch
         val expected = Option(Seq(Artifact("a")))
         fetchNoUris should be(expected)
       }
       "fetch is present and uris are an empty list" in {
-        val fetchEmptyUris = AppNormalization.Artifacts(Option(Nil), Option(Seq(Artifact("a")))).normalize.fetch
+        val fetchEmptyUris = AppNormalization.Artifacts(Option(Nil), Option(Seq(Artifact("a")))).normalizeOrThrow.fetch
         val expected = Option(Seq(Artifact("a")))
         fetchEmptyUris should be(expected)
       }
       "fetch and uris are both empty lists" in {
-        val fetchEmptyUris = AppNormalization.Artifacts(Option(Nil), Option(Nil)).normalize.fetch
+        val fetchEmptyUris = AppNormalization.Artifacts(Option(Nil), Option(Nil)).normalizeOrThrow.fetch
         val expected = Option(Nil)
         fetchEmptyUris should be(expected)
       }
       "fetch and uris are both non-empty" in {
         assertThrows[SerializationFailedException] {
-          AppNormalization.Artifacts(Option(Seq("u")), Option(Seq(Artifact("a")))).normalize
+          AppNormalization.Artifacts(Option(Seq("u")), Option(Seq(Artifact("a")))).normalizeOrThrow
         }
       }
     }
@@ -99,7 +99,7 @@ class AppNormalizationTest extends UnitTest {
     def normalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
       val config = AppNormalization.Configure(defaultNetworkName, mesosBridgeName)
       Normalization[App] { app =>
-        AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalized(app))
+        AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalizedOrThrow(app))
       }
     }
 
@@ -107,7 +107,7 @@ class AppNormalizationTest extends UnitTest {
       val config = AppNormalization.Configure(defaultNetworkName, mesosBridgeName)
       Normalization[AppUpdate] { app =>
         AppNormalization.forUpdates(config)
-          .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))
+          .normalized(AppNormalization.forDeprecatedUpdates(config).normalizedOrThrow(app))
       }
     }
 
@@ -211,7 +211,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Seq(Network(mode = NetworkMode.Container, name = Some("1")))
         )
 
-        val Some(Seq(portMapping)) = legacyDockerApp.normalize.container.flatMap(_.portMappings)
+        val Some(Seq(portMapping)) = legacyDockerApp.normalizeOrThrow.container.flatMap(_.portMappings)
         portMapping shouldBe ContainerPortMapping(
           containerPort = 80,
           networkNames = List("1"))
@@ -236,7 +236,7 @@ class AppNormalizationTest extends UnitTest {
           unreachableStrategy = Some(UnreachableEnabled.Default),
           portDefinitions = Some(Apps.DefaultPortDefinitions)
         )
-        legacyDockerApp.normalize should be(normalDockerApp)
+        legacyDockerApp.normalizeOrThrow should be(normalDockerApp)
       }
 
       "legacy docker app specifies ipAddress and BRIDGE networking" in {
@@ -258,7 +258,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Some(UnreachableEnabled.Default)
         )
-        legacyDockerApp.normalize should be(normalDockerApp)
+        legacyDockerApp.normalizeOrThrow should be(normalDockerApp)
       }
 
       "legacy docker app specifies NONE networking, with or without ipAddress" in {
@@ -270,7 +270,7 @@ class AppNormalizationTest extends UnitTest {
               docker = Some(DockerContainer(network = Some(DockerNetwork.None), image = "image0", portMappings = Some(Nil)))
             )),
             ipAddress = Some(IpAddress())
-          ).normalize
+          ).normalizeOrThrow
         }
         assertThrows[SerializationFailedException] {
           App(
@@ -279,7 +279,7 @@ class AppNormalizationTest extends UnitTest {
               `type` = EngineType.Docker,
               docker = Some(DockerContainer(network = Some(DockerNetwork.None), image = "image0", portMappings = Some(Nil)))
             ))
-          ).normalize
+          ).normalizeOrThrow
         }
       }
       "legacy docker app specifies both legacy and canonical networking modes" in {
@@ -291,7 +291,7 @@ class AppNormalizationTest extends UnitTest {
               docker = Some(DockerContainer(network = Some(DockerNetwork.Host), image = "image0", portMappings = Some(Nil)))
             )),
             networks = Seq(Network(mode = NetworkMode.Host))
-          ).normalize
+          ).normalizeOrThrow
         }
         assertThrows[SerializationFailedException] {
           App(
@@ -301,7 +301,7 @@ class AppNormalizationTest extends UnitTest {
               docker = Some(DockerContainer(network = Some(DockerNetwork.Bridge), image = "image0", portMappings = Some(Nil)))
             )),
             networks = Seq(Network(mode = NetworkMode.ContainerBridge))
-          ).normalize
+          ).normalizeOrThrow
         }
         assertThrows[SerializationFailedException] {
           App(
@@ -311,7 +311,7 @@ class AppNormalizationTest extends UnitTest {
               docker = Some(DockerContainer(network = Some(DockerNetwork.User), image = "image0", portMappings = Some(Nil)))
             )),
             networks = Seq(Network(mode = NetworkMode.Container))
-          ).normalize
+          ).normalizeOrThrow
         }
       }
     }
@@ -320,12 +320,12 @@ class AppNormalizationTest extends UnitTest {
       implicit val appNormalizer = normalizer(None)
 
       "using legacy docker networking API" in new Fixture {
-        val normalized = legacyDockerApp.normalize
+        val normalized = legacyDockerApp.normalizeOrThrow
         normalized should be(normalizedDockerApp)
       }
 
       "using legacy docker networking API, without a named network" in new Fixture {
-        val normalized = legacyDockerApp.copy(ipAddress = Option(IpAddress())).normalize
+        val normalized = legacyDockerApp.copy(ipAddress = Option(IpAddress())).normalizeOrThrow
         normalized should be(normalizedDockerApp.copy(networks = Seq(Network())))
       }
 
@@ -335,18 +335,18 @@ class AppNormalizationTest extends UnitTest {
             Option(IpDiscovery(
               ports = Seq(IpDiscoveryPort(34, "port1"))
             ))
-          ))).normalize
+          ))).normalizeOrThrow
         }
         ex.getMessage should include("discovery.ports")
       }
 
       "using legacy IP/CT networking API" in new Fixture {
-        legacyMesosApp.normalize should be(normalizedMesosApp)
+        legacyMesosApp.normalizeOrThrow should be(normalizedMesosApp)
       }
 
       "using legacy IP/CT networking API without a named network" in new Fixture {
         legacyMesosApp.copy(ipAddress = legacyMesosApp.ipAddress.map(_.copy(
-          networkName = None))).normalize should be(normalizedMesosApp.copy(networks = Seq(Network())))
+          networkName = None))).normalizeOrThrow should be(normalizedMesosApp.copy(networks = Seq(Network())))
       }
     }
 
@@ -355,7 +355,7 @@ class AppNormalizationTest extends UnitTest {
 
       "for an empty app update" in {
         val raw = AppUpdate()
-        raw.normalize should be(raw)
+        raw.normalizeOrThrow should be(raw)
       }
 
       "for an empty docker app update" in {
@@ -368,7 +368,7 @@ class AppNormalizationTest extends UnitTest {
           )),
           networks = Option(Seq(Network()))
         )
-        raw.normalize should be(raw)
+        raw.normalizeOrThrow should be(raw)
       }
     }
 
@@ -378,7 +378,7 @@ class AppNormalizationTest extends UnitTest {
 
       "app w/ non-host networking discards requirePorts" in new Fixture {
         val raw = legacyMesosApp.copy(requirePorts = true)
-        raw.normalize should be(normalizedMesosApp)
+        raw.normalizeOrThrow should be(normalizedMesosApp)
       }
 
       "app w/ host networking preserves requirePorts" in new Fixture {
@@ -390,7 +390,7 @@ class AppNormalizationTest extends UnitTest {
           portDefinitions = Option(PortDefinitions(0)),
           requirePorts = true
         )
-        raw.normalize should be(raw)
+        raw.normalizeOrThrow should be(raw)
       }
     }
 
@@ -405,7 +405,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(container = Some(Container(
+        raw.normalizeOrThrow should be(raw.copy(container = Some(Container(
           `type` = EngineType.Mesos,
           portMappings = Option(Seq(
             ContainerPortMapping(0, name = Some("default"), hostPort = Option(0))
@@ -426,7 +426,7 @@ class AppNormalizationTest extends UnitTest {
           )),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(
+        raw.normalizeOrThrow should be(raw.copy(
           container = Some(Container(
             `type` = EngineType.Docker,
             docker = Some(DockerContainer(image = "image0")),
@@ -450,7 +450,7 @@ class AppNormalizationTest extends UnitTest {
           )),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(
+        raw.normalizeOrThrow should be(raw.copy(
           container = Some(Container(
             `type` = EngineType.Docker,
             docker = Some(DockerContainer(image = "image0")),
@@ -474,7 +474,7 @@ class AppNormalizationTest extends UnitTest {
           )),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(
+        raw.normalizeOrThrow should be(raw.copy(
           container = Some(Container(
             `type` = EngineType.Docker,
             docker = Some(DockerContainer(image = "image0")),
@@ -498,7 +498,7 @@ class AppNormalizationTest extends UnitTest {
                 portMappings = Some(Seq(ContainerPortMapping()))))
             )),
             unreachableStrategy = Option(UnreachableEnabled.Default)
-          ).normalize
+          ).normalizeOrThrow
         }
       }
 
@@ -513,7 +513,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw)
+        raw.normalizeOrThrow should be(raw)
       }
 
       "provide default port mappings when left unspecified for an app container w/ bridge networking" in {
@@ -526,7 +526,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(container = raw.container.map(_.copy(
+        raw.normalizeOrThrow should be(raw.copy(container = raw.container.map(_.copy(
           portMappings = Option(Seq(ContainerPortMapping(hostPort = Option(0), name = Option("default"))))))))
       }
 
@@ -540,7 +540,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Seq(Network(name = Option("network1"), mode = NetworkMode.Container)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(container = raw.container.map(_.copy(
+        raw.normalizeOrThrow should be(raw.copy(container = raw.container.map(_.copy(
           portMappings = Option(Seq(ContainerPortMapping(name = Option("default"))))))))
       }
 
@@ -552,7 +552,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Apps.DefaultNetworks,
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw)
+        raw.normalizeOrThrow should be(raw)
       }
 
       "provide a default port definition when no port definitions are specified" in {
@@ -562,7 +562,7 @@ class AppNormalizationTest extends UnitTest {
           networks = Apps.DefaultNetworks,
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(portDefinitions = Option(Apps.DefaultPortDefinitions)))
+        raw.normalizeOrThrow should be(raw.copy(portDefinitions = Option(Apps.DefaultPortDefinitions)))
       }
     }
   }
