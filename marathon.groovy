@@ -277,7 +277,7 @@ def checkout_marathon() {
       clean_git()
     }
   } else if (is_release_tag()) {
-    setBuildInfo("Tag $RELEASE_TAG to $RELEASE_COMMIT")
+    setBuildInfo("Tag $RELEASE_TAG to $RELEASE_COMMIT", "Releasing $RELEASE_TAG at $RELEASE_COMMIT")
     git changelog: false, credentialsId: '4ff09dce-407b-41d3-847a-9e6609dd91b8', poll: false, url: 'git@github.com:mesosphere/marathon.git'
     sh "git checkout $RELEASE_COMMIT"
     if (!sh(script: "git branch --contains $RELEASE_COMMIT", returnStdout: true).contains("releases/")) {
