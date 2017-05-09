@@ -13,11 +13,13 @@ def gitTag() {
 }
 
 def gitBranch() {
-  if (GITBRANCH == "" && env.BRANCH_NAME != "") {
-    // multibranch builds mysteriously don't have the symbolic git refs (e.g. master)
-    GITBRANCH = env.BRANCH_NAME
-  } else {
-    GITBRANCH = sh(script: "git symbolic-ref HEAD", returnStdout: true).trim()
+  if (GITBRANCH == "") {
+    if (env.BRANCH_NAME != "") {
+      // multibranch builds mysteriously don't have the symbolic git refs (e.g. master)
+      GITBRANCH = env.BRANCH_NAME
+    } else {
+      GITBRANCH = sh(script: "git symbolic-ref HEAD", returnStdout: true).trim()
+    }
   }
   return GITBRANCH
 }
