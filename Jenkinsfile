@@ -19,11 +19,9 @@ def m
 ansiColor('gnome-terminal') {
   node('JenkinsMarathonCI-Debian8-2017-04-27') {
     // fetch the file directly from SCM so the job can use it to checkout the rest of the pipeline.
+    deleteDir()
     checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: GROOVY_BRANCH]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'SparseCheckoutPaths', sparseCheckoutPaths: [[path: 'marathon.groovy']]]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'mesosphere-ci-github', url: 'git@github.com:mesosphere/marathon.git']]]
     m = load("marathon.groovy")
-    stage("Checkout") {
-      m.checkout_marathon()
-    }
     m.build_marathon()
   }
 }

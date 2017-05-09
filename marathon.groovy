@@ -198,11 +198,11 @@ def report_failure() {
     // we can safely delete the tag _even_ if it was already an existing tag on the origin since we'll just repull
     // the tags later.
     sh "git tag -d $RELEASE_TAG || true"
-    slackSend(
+    /*slackSend(
         message: "\u2718 Failed to create release tag $RELEASE_TAG for $RELEASE_COMMIT",
         color: "warning",
         channel: "#marathon-dev",
-        tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")
+        tokenCredentialId: "f430eaac-958a-44cb-802a-6a943323a6a8")*/
   } else {
     if (is_master_or_release()) {
       slackSend(
