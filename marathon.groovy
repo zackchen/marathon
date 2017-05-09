@@ -278,10 +278,8 @@ def checkout_marathon() {
     }
   } else if (is_release_tag()) {
     setBuildInfo("Tag $RELEASE_TAG to $RELEASE_COMMIT", "Releasing $RELEASE_TAG at $RELEASE_COMMIT")
-    // jenkins doesn't checkout enough information for some reason. Couldn't figure out why.
-    sshagent(['mesosphere-ci-github']) {
-      sh "git clone git@github.com:mesosphere/marathon.git ."
-    }
+    // need to checkout all the release branches to be able to check if we're building a commit that is on a release branch.
+    checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: '*/releases/.*']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'mesosphere-ci-github', url: 'git@github.com:mesosphere/marathon.git']]]
     sh "git checkout $RELEASE_COMMIT"
     if (sh(script: "git branch --contains $RELEASE_COMMIT", returnStdout: true).contains("releases/")) {
       sh(script: "git branch --contains $RELEASE_COMMIT")
