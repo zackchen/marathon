@@ -280,7 +280,8 @@ def checkout_marathon() {
     setBuildInfo("Tag $RELEASE_TAG to $RELEASE_COMMIT", "Releasing $RELEASE_TAG at $RELEASE_COMMIT")
     git changelog: false, credentialsId: '4ff09dce-407b-41d3-847a-9e6609dd91b8', poll: false, url: 'git@github.com:mesosphere/marathon.git'
     sh "git checkout $RELEASE_COMMIT"
-    if (!sh(script: "git branch --contains $RELEASE_COMMIT", returnStdout: true).contains("releases/")) {
+    if (sh(script: "git branch --contains $RELEASE_COMMIT", returnStdout: true).contains("releases/")) {
+      sh(script: "git branch --contains $RELEASE_COMMIT")
       error "Cannot tag a release commit that is not in a release branch."
     }
     if (sh(script: "git tag | grep $RELEASE_TAG").trim() != "") {
