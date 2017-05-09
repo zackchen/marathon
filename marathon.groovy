@@ -523,6 +523,7 @@ def build_marathon() {
     }
     stage_with_commit_status("Publish Binaries") {
       if (is_release_tag()) {
+        input "Are you sure you're ready to push the tag and all artifacts for $RELEASE_TAG @ $RELEASE_COMMIT?"
         // push the tag before publishing if we're doing a tagged release.
         sshagent(['mesosphere-ci-github']) {
           sh '''git push origin --tags'''
