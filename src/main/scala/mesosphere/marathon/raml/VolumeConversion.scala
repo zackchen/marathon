@@ -164,12 +164,14 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       persistent = vol.getPersistent.toRaml,
       mode = vol.getMode.toRaml
     )
+    case vol if vol.hasSecret => AppSecretVolume(
+      secret = SecretDef(vol.getSecret.getSource)
+    )
     case vol => AppDockerVolume(
       containerPath = vol.getContainerPath,
       hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
       mode = vol.getMode.toRaml
     )
-    // TODO adju secrets?
   }
 }
 
