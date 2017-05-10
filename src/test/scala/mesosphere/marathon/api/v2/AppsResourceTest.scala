@@ -533,7 +533,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       a[SerializationFailedException] shouldBe thrownBy(prepareApp(app, groupManager))
     }
 
-    "Create a new app (that uses secrets) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses secret ref) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
@@ -561,7 +561,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "Create a new app (that uses undefined secrets) and fails" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses undefined secret ref) and fails" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("The secrets feature is enabled")
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
@@ -577,6 +577,60 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getStatus should be(422)
       response.getEntity.toString should include("/env(NAMED_FOO)")
       response.getEntity.toString should include("references an undefined secret")
+    }
+
+    "Create a new app (that uses secret def) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+      Given("The secrets feature is enabled")
+
+      And("An app with a secret and an envvar secret-ref")
+      val app = App(id = "/app", cmd = Some("cmd"),
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.SecretDef("foo"))))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It is successful")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+
+      And("the JSON is as expected, including a newly generated version")
+      import mesosphere.marathon.api.v2.json.Formats._
+      val expected = AppInfo(
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        maybeTasks = Some(immutable.Seq.empty),
+        maybeCounts = Some(TaskCounts.zero),
+        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      )
+      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+    }
+
+    "Create a new app (that uses file based secret) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+      Given("The secrets feature is enabled")
+
+      And("An app with a secret and an envvar secret-ref")
+      val app = App(id = "/app", cmd = Some("cmd"),
+        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume(SecretDef("foo"))))))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = appsResource.create(body, force = false, auth.request)
+
+      Then("It is successful")
+      response.getStatus should be(201)
+      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
+
+      And("the JSON is as expected, including a newly generated version")
+      import mesosphere.marathon.api.v2.json.Formats._
+      val expected = AppInfo(
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        maybeTasks = Some(immutable.Seq.empty),
+        maybeCounts = Some(TaskCounts.zero),
+        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      )
+      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
     "The secrets feature is NOT enabled and create app (that uses secret refs) fails" in new Fixture(configArgs = Seq()) {
