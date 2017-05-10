@@ -5,7 +5,7 @@
     tests round dcos services registration and control and security.
 """
 import common
-import os
+import shakedown
 
 # this is intentional import *
 # it imports all the common test_ methods which are to be tested on root and mom
@@ -22,7 +22,9 @@ pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
 @pytest.fixture(scope="function")
 def marathon_service_name():
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     yield 'marathon'
+    shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     clear_marathon()
 
 

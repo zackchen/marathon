@@ -722,8 +722,12 @@ def test_launch_container_with_persistent_volume():
     client.restart_app(app_id)
     shakedown.deployment_wait()
 
-    tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    def check_task_recovery():
+        tasks = client.get_tasks(app_id)
+        assert len(tasks) == 1
+
+    check_task_recovery()
 
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
