@@ -247,8 +247,8 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
 def test_app_secret_volume(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
-    if not common.is_enterprise_cli_package_installed():
-        common.install_enterprise_cli_package()
+    # if not common.is_enterprise_cli_package_installed():
+        # common.install_enterprise_cli_package()
 
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')
@@ -344,13 +344,12 @@ def test_app_secret_env_var(secret_fixture):
 
 def test_pod_secret_env_var(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
-    # if not common.is_enterprise_cli_package_installed():
-    #     common.install_enterprise_cli_package()
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
 
     secret_name, secret_value = secret_fixture
 
     pod_id = '/pod-{}-{}'.format(secret_name.replace('/', ''), randint(100,999))
-
     pod_def = {
         "id": pod_id,
         "containers": [{
@@ -359,13 +358,20 @@ def test_pod_secret_env_var(secret_fixture):
                 "cpus": 0.1,
                 "mem": 64
             },
+            "endpoints": [{
+                "name": "http",
+                "hostPort": 0,
+                "protocol": [
+                    "tcp"
+                ]}
+            ],
             "exec": {
                 "command": {
-                    "shell": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $PORT_API"
+                    "shell": "echo $SECRET_ENV && echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTP"
                 }
             }
         }],
-        "env": {
+        "environment": {
             "SECRET_ENV": {
                 "secret": {
                     "source": secret_name
@@ -378,22 +384,81 @@ def test_pod_secret_env_var(secret_fixture):
     }
 
     client = marathon.create_client()
-    try:
-        client.add_app(app_def)
-        shakedown.deployment_wait()
+    client.add_pod(pod_def)
+    shakedown.deployment_wait()
 
-        tasks = client.get_tasks(pod_id)
-        assert len(tasks) == 1
+    instances = client.show_pod(pod_id)['instances']
+    assert len(instances) == 1
 
-        port = tasks[0]['ports'][0]
-        host = tasks[0]['host']
-        cmd = "curl {}:{}/secret-env".format(host, port)
-        run, data = shakedown.run_command_on_master(cmd)
+    port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
+    host = instances[0]['networks'][0]['addresses'][0]
+    cmd = "curl {}:{}/secret-env".format(host, port)
+    run, data = shakedown.run_command_on_master(cmd)
 
-        assert run, "{} did not succeed".format(cmd)
-        assert data.rstrip() == secret_value
-    finally:
-        client.remove_app(pod_id)
+    assert run, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
+
+
+def test_pod_secret_volume(secret_fixture):
+    # Install enterprise-cli since it's needed to create secrets
+    if not common.is_enterprise_cli_package_installed():
+        common.install_enterprise_cli_package()
+
+    secret_name, secret_value = secret_fixture
+    secret_normalized_name = secret_name.replace('/', '')
+
+    pod_id = '/pod-{}-{}'.format(secret_name.replace('/', ''), randint(100,999))
+
+    pod_def = {
+        "id": pod_id,
+        "containers": [{
+            "name": "container-1",
+            "resources": {
+                "cpus": 0.1,
+                "mem": 64
+            },
+            "endpoints": [{
+                "name": "http",
+                "hostPort": 0,
+                "protocol": [
+                    "tcp"
+                ]}
+            ],
+            "exec": {
+                "command": {
+                    "shell": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $ENDPOINT_HTTP".format(secret_normalized_name, secret_normalized_name),
+                }
+            },
+            "volumeMounts": [{
+                "name": "vol",
+                "mountPath": secret_name
+            }],
+        }],
+        "networks": [{
+            "mode": "host"
+        }],
+        "volumes": [{
+            "name": "vol",
+            "secret": {
+                "source": secret_name
+            }
+        }]
+    }
+
+    client = marathon.create_client()
+    client.add_pod(pod_def)
+    shakedown.deployment_wait()
+
+    instances = client.show_pod(pod_id)['instances']
+    assert len(instances) == 1
+
+    port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
+    host = instances[0]['networks'][0]['addresses'][0]
+    cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
+    run, data = shakedown.run_command_on_master(cmd)
+
+    assert run, "{} did not succeed".format(cmd)
+    assert data.rstrip() == secret_value
 
 
 @pytest.fixture(scope="function")
