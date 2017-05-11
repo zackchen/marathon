@@ -843,7 +843,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     common.systemctl_master()
     shakedown.wait_for_service_endpoint(marathon_service_name)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks('/master-failure')
         tasks[0]['id'] == original_task_id
