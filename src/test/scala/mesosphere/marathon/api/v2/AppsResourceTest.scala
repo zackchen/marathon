@@ -533,7 +533,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       a[SerializationFailedException] shouldBe thrownBy(prepareApp(app, groupManager))
     }
 
-    "Create a new app (that uses secret ref) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses secret ref) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
@@ -561,7 +561,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "Create a new app (that uses undefined secret ref) and fails" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses undefined secret ref) and fails" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
       Given("The secrets feature is enabled")
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
@@ -579,7 +579,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("references an undefined secret")
     }
 
-    "Create a new app (that uses secret def) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses secret def) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
@@ -606,7 +606,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
 
-    "Create a new app (that uses file based secret) successfully" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app (that uses file based secret) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
