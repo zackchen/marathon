@@ -76,7 +76,10 @@ def package(request):
     package_name = request.param
     yield package_name
     try:
-        shakedown.uninstall_package_and_data(package_name)
+        shakedown.uninstall_package_and_wait(package_name)
+        shakedown.delete_persistent_data(
+            '{}-role'.format(package_name),
+            'dcos-service-{}'.format(package_name))
     except Exception as e:
         # cleanup does NOT fail the test
         print(e)
