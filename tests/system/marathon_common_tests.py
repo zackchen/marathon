@@ -587,15 +587,18 @@ def test_resident_health():
         Where resident tasks (common for Persistent Volumes) would fail health checks
 
     """
+    app_id = uuid.uuid4().hex
     app_def = resident_app()
+    app_def['id'] = app_id
+
     client = marathon.create_client()
     client.add_app(app_def)
-    shakedown.deployment_wait(timeout=timedelta(minutes=5).total_seconds())
+    shakedown.deployment_wait(timeout=timedelta(minutes=10).total_seconds())
 
-    tasks = client.get_tasks('/overlay-resident')
+    tasks = client.get_tasks(app_id)
     assert len(tasks) == 1
 
-    client.remove_app(app_def['id'])
+    client.remove_app(app_id)
     shakedown.deployment_wait()
 
 
