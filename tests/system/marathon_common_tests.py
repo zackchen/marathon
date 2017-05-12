@@ -16,7 +16,7 @@ from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
 from datetime import timedelta
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
-                       marthon_version_less_than, mom_version_less_than)
+                       marthon_version_less_than, mom_version_less_than, marathon_1_4)
 from urllib.parse import urljoin
 from utils import fixture_dir, get_resource
 
@@ -925,6 +925,7 @@ def test_default_user():
     client.remove_app("/unique-sleep")
 
 
+@marathon_1_4
 def test_declined_offer_due_to_resource_role():
     """ Tests that an offer was declined because the role doesn't exist
     """
@@ -934,6 +935,7 @@ def test_declined_offer_due_to_resource_role():
     _test_declined_offer(app_id, app_def, 'UnfulfilledRole')
 
 
+@marathon_1_4
 def test_declined_offer_due_to_cpu_requirements():
     """ Tests that an offer was declined because the number of cpus can't be found in an offer
     """
