@@ -1034,7 +1034,7 @@ def test_ping(marathon_service_name):
     """
     response = common.http_get_marathon_path('ping', marathon_service_name)
     assert response.status_code == 200
-    assert response.text == 'pong'
+    assert 'pong' in response.text
 
 
 @dcos_1_9
