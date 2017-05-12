@@ -14,7 +14,9 @@ from marathon_common_tests import *
 from marathon_auth_common_tests import *
 from marathon_pods_tests import *
 
-from shakedown import (masters, required_masters, public_agents, required_public_agents)
+from shakedown import (masters, required_masters, public_agents, required_public_agents,
+                        dcos_1_9)
+
 from datetime import timedelta
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
@@ -143,6 +145,7 @@ def test_event_channel():
     check_kill_message()
 
 
+@dcos_1_9
 def test_external_volume():
     volume_name = "marathon-si-test-vol-{}".format(uuid.uuid4().hex)
     app_def = common.external_volume_mesos_app(volume_name)
