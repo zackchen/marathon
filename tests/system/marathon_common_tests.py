@@ -501,7 +501,7 @@ def test_command_health_check_healthy():
     assert_app_healthy(client, app_def, command_health_check())
 
 
-# todo need to take a look
+@dcos_1_9
 @pytest.mark.parametrize('protocol', [
    'MESOS_HTTPS',
    pytest.mark.skipif('mom_version_less_than("1.4.2")')('HTTPS')
