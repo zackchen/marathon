@@ -502,11 +502,7 @@ def test_command_health_check_healthy():
 
 
 @dcos_1_9
-@pytest.mark.parametrize('protocol', [
-   'MESOS_HTTPS',
-   pytest.mark.skipif('mom_version_less_than("1.4.2")')('HTTPS')
-])
-def test_https_health_check_healthy(protocol):
+def test_https_health_check_healthy(protocol='MESOS_HTTPS'):
     """ Test HTTPS and MESOS_HTTPS protocols with a prepared nginx image that enables
         SSL (using self-signed certificate) and listens on 443
     """
