@@ -140,7 +140,7 @@ def test_event_channel():
     @retrying.retry(wait_fixed=1000, stop_max_delay=10000)
     def check_kill_message():
         status, stdout = shakedown.run_command_on_master('cat test.txt')
-        assert 'Killed' in stdout
+        assert 'KILLED' in stdout
 
     check_kill_message()
 
