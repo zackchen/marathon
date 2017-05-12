@@ -455,6 +455,7 @@ def test_scale_app_in_group_then_group():
     assert len(tasks2) == 2
 
 
+@dcos_1_9
 @pytest.mark.parametrize('protocol', ['HTTP', 'MESOS_HTTP', 'TCP', 'MESOS_TCP'])
 def test_http_health_check_healthy(protocol):
     """ Test HTTP, MESOS_HTTP, TCP and MESOS_TCP with standard python server
