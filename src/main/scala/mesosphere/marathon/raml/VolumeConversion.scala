@@ -64,6 +64,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         persistent = pv.persistent.toRaml,
         mode = volume.mode.toRaml)
       case sv: state.SecretVolume => AppSecretVolume(
+        if (volume.containerPath != null && volume.containerPath.length > 0) Some(volume.containerPath) else None,
         secret = SecretDef(sv.secret.source)
       )
     }
@@ -121,7 +122,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumeSecretReads: Reads[AppSecretVolume, state.Volume] = Reads { vol =>
-    SecretVolume(vol.secret.source, Secret(vol.secret.source)) // TODO adju adapt container path
+    SecretVolume(vol.containerPath.getOrElse(vol.secret.source), Secret(vol.secret.source))
   }
 
   implicit val appVolumeExternalProtoRamlWriter: Writes[Protos.Volume.ExternalVolumeInfo, ExternalVolume] = Writes { vol =>
@@ -165,6 +166,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       mode = vol.getMode.toRaml
     )
     case vol if vol.hasSecret => AppSecretVolume(
+      containerPath = if (vol.hasContainerPath) Some(vol.getContainerPath) else None,
       secret = SecretDef(vol.getSecret.getSource)
     )
     case vol => AppDockerVolume(

@@ -611,7 +611,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
-        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume(SecretDef("foo"))))))
+        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume(Some("/path"), SecretDef("foo"))))))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -678,7 +678,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       config.isFeatureSet(Features.SECRETS) should be(false)
 
       And("An app with an envvar secret-def")
-      val secretVolume = AppSecretVolume(SecretDef("/bar"))
+      val secretVolume = AppSecretVolume(None, SecretDef("/bar"))
       val containers = raml.Container(`type` = EngineType.Mesos, volumes = Seq(secretVolume))
       val app = App(id = "/app", cmd = Some("cmd"),
         container = Option(containers)

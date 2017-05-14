@@ -123,6 +123,10 @@ types:
   AppSecretVolume:
     type: object
     properties:
+      containerPath?:
+        type: string
+        minLength: 1
+        description: The path of the secret in the container
       secret:
         type: secrets.SecretDef
         description: Secret that is used by this volume
