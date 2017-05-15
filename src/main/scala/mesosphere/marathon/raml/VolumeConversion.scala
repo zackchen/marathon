@@ -64,7 +64,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         persistent = pv.persistent.toRaml,
         mode = volume.mode.toRaml)
       case sv: state.SecretVolume => AppSecretVolume(
-        if (volume.containerPath != null && volume.containerPath.length > 0) Some(volume.containerPath) else None,
+        if (volume.containerPath.length > 0) Some(volume.containerPath) else None,
         secret = SecretDef(sv.secret.source)
       )
     }
