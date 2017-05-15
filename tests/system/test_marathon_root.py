@@ -15,7 +15,7 @@ from marathon_auth_common_tests import *
 from marathon_pods_tests import *
 
 from shakedown import (masters, required_masters, public_agents, required_public_agents,
-                        dcos_1_9)
+                        dcos_1_9, marthon_version_less_than)
 
 from datetime import timedelta
 
@@ -113,6 +113,7 @@ def test_launch_app_on_public_agent():
     assert task_ip in shakedown.get_public_agents()
 
 
+@pytest.mark.skipif('marthon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("event_fixture")
 def test_event_channel():
     """ Tests the event channel.  The way events are verified is by streaming the events
