@@ -252,6 +252,7 @@ def test_app_secret_volume(secret_fixture):
 
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')
+    secret_path = 'mysecretpath'
 
     app_id = '/app-{}-{}'.format(secret_normalized_name, randint(100,999))
 
@@ -262,11 +263,16 @@ def test_app_secret_volume(secret_fixture):
         "instances": 1,
         "cpus": 0.1,
         "mem": 64,
-        "cmd": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".
-            format(secret_normalized_name, secret_normalized_name),
+        "cmd": "cat {} >> {}_file && cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".
+            format(secret_normalized_name, secret_normalized_name, secret_path, secret_normalized_name),
         "container": {
             "type": "MESOS",
             "volumes": [{
+                "secret": {
+                    "source": secret_name
+                }
+            }, {
+                "containerPath": secret_path,
                 "secret": {
                     "source": secret_name
                 }
@@ -294,7 +300,8 @@ def test_app_secret_volume(secret_fixture):
     run, data = shakedown.run_command_on_master(cmd)
 
     assert run, "{} did not succeed".format(cmd)
-    assert data == secret_value
+    # secret_value is cat two times to the file, therefore we expect two times the value of secret in data
+    assert data == "{}{}".format(secret_value, secret_value)
 
 
 def test_app_secret_env_var(secret_fixture):
