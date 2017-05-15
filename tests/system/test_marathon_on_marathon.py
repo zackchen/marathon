@@ -143,6 +143,7 @@ def test_mom_with_network_failure():
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
 
 
+@dcos_1_9
 @private_agents(2)
 def test_mom_with_network_failure_bounce_master():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures simulated by
@@ -184,7 +185,7 @@ def test_mom_with_network_failure_bounce_master():
 
     with shakedown.marathon_on_marathon():
         client = marathon.create_client()
-        shakedown.wait_for_task("marathon-user", "sleep")
+        shakedown.wait_for_task("marathon-user", "sleep", timedelta(minutes=10).total_seconds())
         tasks = client.get_tasks('sleep')
         current_sleep_task_id = tasks[0]["id"]
 
