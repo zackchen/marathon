@@ -180,8 +180,7 @@ def test_mom_with_network_failure_bounce_master():
     reconnect_agent(task_ip)
 
     time.sleep(timedelta(minutes=1).total_seconds())
-    shakedown.wait_for_service_endpoint('marathon-user')
-    shakedown.wait_for_task("marathon-user", "sleep")
+    shakedown.wait_for_service_endpoint('marathon-user', timedelta(minutes=10).total_seconds())
 
     with shakedown.marathon_on_marathon():
         client = marathon.create_client()
