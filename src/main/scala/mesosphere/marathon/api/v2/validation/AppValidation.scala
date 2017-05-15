@@ -160,7 +160,7 @@ trait AppValidation {
     }
     val validSecretVolume = validator[AppSecretVolume] { v =>
       v.containerPath is optional(notEmpty)
-      v.secret is notNull
+      v.secret.source is valid(notEmpty)
     }
     val validPersistentVolume = {
       val notHaveConstraintsOnRoot = isTrue[PersistentVolume](
