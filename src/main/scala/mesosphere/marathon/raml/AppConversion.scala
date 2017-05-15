@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.ResidencyDefinition
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
+import mesosphere.marathon.util.RichTraversable._
 
 import scala.concurrent.duration._
 
@@ -128,8 +129,8 @@ trait AppConversion extends ConstraintConversion with EnvVarConversion with Heal
     val selectedStrategy = ResidencyAndUpgradeStrategy(
       app.residency.map(Raml.fromRaml(_)),
       app.upgradeStrategy.map(Raml.fromRaml(_)),
-      hasPersistentVolumes = app.container.exists(_.volumes.collect{ case v: AppPersistentVolume => v }.nonEmpty),
-      hasExternalVolumes = app.container.exists(_.volumes.collect{ case v: AppExternalVolume => v }.nonEmpty)
+      hasPersistentVolumes = app.container.exists(_.volumes.existsAn[AppPersistentVolume]),
+      hasExternalVolumes = app.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
 
     val backoffStrategy = BackoffStrategy(

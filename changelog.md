@@ -114,56 +114,13 @@ Marathon is in better compliance with various security best-practices. An exampl
 ### Overview
 
 #### File based secrets
-It is possible to define secrets with a given mount path. They can be interpreted as file based secrets by a marathon plugin.
-See the following example:
-
-for apps:
-
-```
-{
-  "id": "app-with-secrets",
-  "container": {
-    "volumes": [
-      {
-        "containerPath": "path",
-        "secret": {
-          "source": "/path/to/my/secret"
-        }
-      }
-    ]
-  }
-}
-```
-
-for pods:
-
-```
-{
-  "id": "/pod",
-  "containers": [
-    {
-      "name": "container-1",
-      "volumeMounts": [
-        {
-          "name": "secretvol",
-          "mountPath": "path"
-        }
-      ]
-    }
-  ],
-  "volumes": [
-    {
-      "name": "secretvol",
-      "secret": {
-        "source": "/path/to/my/secret"
-      }
-    }
-  ]
-}
-```
+Marathon has a pluggable interface for secret store providers.
+Previous versions of Marathon allowed secrets to be passed as environment variables.
+With this version it is also possible to provide secrets as volumes, mounted under a specified path.
+See [file based secret documentation](http://mesosphere.github.io/marathon/docs/configure-file-secrets.html)
 
 #### New secrets API and deprecating old API 
-To define a environment base secret you should now use place the secret definition in place of the usage.
+To define an environment base secret, you should now use the new api and place the secret definition directly.
 Shown in the example as `MY_ENV`. Using secret references is now deprecated and will be removed in the next marathon release.
 Shown in the example as `DEPRECATED_WAY`.
 

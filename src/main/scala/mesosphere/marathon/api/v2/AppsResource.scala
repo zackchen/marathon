@@ -22,6 +22,7 @@ import mesosphere.marathon.raml.{ AppConversion, AppExternalVolume, AppPersisten
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.RichTraversable._
 import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/apps")
@@ -432,8 +433,8 @@ object AppsResource {
     val selectedStrategy = AppConversion.ResidencyAndUpgradeStrategy(
       residency = update.residency.map(Raml.fromRaml(_)),
       upgradeStrategy = update.upgradeStrategy.map(Raml.fromRaml(_)),
-      hasPersistentVolumes = update.container.exists(_.volumes.collect{ case v: AppPersistentVolume => v }.nonEmpty),
-      hasExternalVolumes = update.container.exists(_.volumes.collect{ case v: AppExternalVolume => v }.nonEmpty)
+      hasPersistentVolumes = update.container.exists(_.volumes.existsAn[AppPersistentVolume]),
+      hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
     val template = AppDefinition(
       appId, residency = selectedStrategy.residency, upgradeStrategy = selectedStrategy.upgradeStrategy)

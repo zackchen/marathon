@@ -9,6 +9,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ AppDefinition, PathId, ResourceRole }
+import mesosphere.marathon.util.RichTraversable._
 
 import scala.util.Try
 
@@ -157,6 +158,10 @@ trait AppValidation {
       v.containerPath is valid(notEmpty)
       v.hostPath is valid(definedAnd(notEmpty))
     }
+    val validSecretVolume = validator[AppSecretVolume] { v =>
+      v.containerPath is optional(notEmpty)
+      v.secret is notNull
+    }
     val validPersistentVolume = {
       val notHaveConstraintsOnRoot = isTrue[PersistentVolume](
         "Constraints on root volumes are not supported") { info =>
@@ -236,7 +241,7 @@ trait AppValidation {
         case v: AppDockerVolume => validate(v)(validHostVolume)
         case v: AppPersistentVolume => validate(v)(validPersistentVolume)
         case v: AppExternalVolume => validate(v)(validExternalVolume)
-        case v: AppSecretVolume => Success // no need for extra validation
+        case v: AppSecretVolume => validate(v)(validSecretVolume)
         case _ => Failure(Set(RuleViolation(v, "Unknown app volume type", None)))
       }
     }
@@ -429,7 +434,7 @@ trait AppValidation {
 
   private val complyWithResidencyRules: Validator[App] =
     isTrue("App must contain persistent volumes and define residency") { app =>
-      val hasPersistentVolumes = app.container.fold(false)(_.volumes.collect{ case v: AppPersistentVolume => v }.nonEmpty)
+      val hasPersistentVolumes = app.container.fold(false)(_.volumes.existsAn[AppPersistentVolume])
       !(app.residency.isDefined ^ hasPersistentVolumes)
     }
 
