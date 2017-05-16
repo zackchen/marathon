@@ -140,6 +140,10 @@ class Migration @Inject() (
   }
 }
 
+object Migration {
+  val throwOnValidationEnabled = sys.env.get("DISABLE_THROW_ON_VALIDATION").isEmpty
+}
+
 /**
   * Implements the following migration logic:
   * * Add version info to the AppDefinition by looking at all saved versions.
@@ -392,6 +396,7 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
 }
 
 class MigrationTo1_1_5(groupRepository: GroupRepository, appRepository: AppRepository, conf: MarathonConf) {
+  import Migration.throwOnValidationEnabled
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] = {
@@ -492,8 +497,12 @@ class MigrationTo1_1_5(groupRepository: GroupRepository, appRepository: AppRepos
       Validation.validateOrThrow(group)
     } catch {
       case e @ ValidationFailedException(f, t) =>
+        // We log the validation error; it's possible that at some interim point between the source data and the current
+        // point, the data is invalid. However, by the end of the migration, it could be. Or, it could be manually
+        // patched.
         log.error(s"Validation failed for $f, because: $t")
-        throw e
+        if (throwOnValidationEnabled)
+          throw e
       case e: Exception => throw e
     }
     group
@@ -566,15 +575,21 @@ class MigrationTo_1_3_5(appRepository: AppRepository, groupRepository: GroupRepo
     deploymentRepository: DeploymentRepository) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  private def isBrokenConstraint(constraint: Constraint): Boolean = {
-    (constraint.getOperator == Constraint.Operator.LIKE ||
-      constraint.getOperator == Constraint.Operator.UNLIKE) &&
-      (constraint.hasValue && Try(Pattern.compile(constraint.getValue)).isFailure)
+  private def isBrokenConstraint(constraint: Constraint): Boolean = constraint.getOperator match {
+    case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE =>
+      constraint.hasValue && Try(Pattern.compile(constraint.getValue)).isFailure
+    case Constraint.Operator.CLUSTER =>
+      (!constraint.hasValue) || (constraint.getValue == "")
+    case _ =>
+      false
   }
 
   private def fixConstraints(app: AppDefinition): AppDefinition = {
     val newConstraints: Set[Constraint] = app.constraints.flatMap { constraint =>
       constraint.getOperator match {
+        case Constraint.Operator.CLUSTER if isBrokenConstraint(constraint) =>
+          log.warn(s"Removing invalid constraint $constraint from ${app.id}")
+          None
         case Constraint.Operator.LIKE | Constraint.Operator.UNLIKE if isBrokenConstraint(constraint) =>
           // we know we have a value and the pattern doesn't compile already.
           if (constraint.getValue == "*") {
