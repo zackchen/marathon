@@ -39,7 +39,7 @@ node('shakedown') {
         ]) {
           try {
             sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
-            sh "dcos config show"
+            sh "dcos config set core.ssl_verify False"
             sh """
               TERM=velocity shakedown \
                 --stdout all \
