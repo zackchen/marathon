@@ -8,12 +8,12 @@ import shakedown
 import time
 import uuid
 
-from common import event_fixture
+from datetime import timedelta
+
 from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
                     persistent_volume_app, python_http_app, readiness_and_health_app,
                     restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait)
-from datetime import timedelta
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
                        marthon_version_less_than, mom_version_less_than, marathon_1_4)
@@ -506,7 +506,12 @@ def test_https_health_check_healthy(protocol='MESOS_HTTPS'):
     """ Test HTTPS and MESOS_HTTPS protocols with a prepared nginx image that enables
         SSL (using self-signed certificate) and listens on 443
     """
+    # marathon version captured here will work for root and mom
+    if marthon_version_less_than('1.4.2'):
+        pytest.skip()
+
     client = marathon.create_client()
+
     app_def = nginx_with_ssl_support()
 
     assert_app_healthy(client, app_def, health_check(protocol=protocol, port_index=1))
@@ -584,7 +589,7 @@ def test_resident_health():
         Where resident tasks (common for Persistent Volumes) would fail health checks
 
     """
-    app_id = uuid.uuid4().hex
+    app_id = "/resident-{}".format(uuid.uuid4().hex)
     app_def = resident_app()
     app_def['id'] = app_id
 
