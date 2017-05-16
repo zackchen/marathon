@@ -2,6 +2,7 @@
 uses:
   strings: stringTypes.raml
   secrets: secrets.raml
+  pragma: pragma.raml
 types:
   EnvVarValue:
     type: string
@@ -17,6 +18,7 @@ types:
   EnvVarSecretRefOrSecretDef: (secrets.SecretDef | EnvVarSecretRef)
   EnvVarSecretRef:
     type: string
+    (pragma.deprecated): Deprecated in favor of secrets.SecretDef
   EnvVarValueOrSecret: (EnvVarValue | EnvVarSecret)
   EnvVars:
     type: object
