@@ -39,6 +39,7 @@ node('shakedown') {
         ]) {
           try {
             sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
+            sh "dcos config show"
             sh """
               TERM=velocity shakedown \
                 --stdout all \
