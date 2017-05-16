@@ -18,7 +18,6 @@ from shakedown import (masters, required_masters, public_agents, required_public
                         dcos_1_9, marthon_version_less_than)
 
 from datetime import timedelta
-from random import randint
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
@@ -197,10 +196,10 @@ def test_external_volume():
 # Backup and restore meeting is done with only one master since new master has to be able
 # to read the backup file that was created by the previous master and the easiest way to
 # test it is when there is 1 master
-@masters(1)
+@pytest.mark.skipif('common.multi_master()')
 def test_marathon_backup_and_restore_leader(marathon_service_name):
 
-    backup_file = 'backup{}.tar'.format(randint(100,999))
+    backup_file = 'backup.tar'
     backup_dir = '/tmp'
     backup_url = 'file://{}/{}'.format(backup_dir, backup_file)
 
@@ -220,6 +219,7 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1
+    task_id = app['tasks'][0]['id']
 
     # Abdicate the leader with backup and restore
     original_leader = shakedown.marathon_leader_ip()
@@ -232,8 +232,10 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
     shakedown.wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds())
     app = client.get_app(app_id)
     assert app['tasksRunning'] == 1
+    assert task_id == app['tasks'][0]['id'], "Task has a different Id after restore"
 
     # Check if the backup file exits and is valid
-    cmd = 'tar -tf {}/{} >/dev/null'.format(backup_dir, backup_file)
+    cmd = 'tar -tf {}/{} | wc -l'.format(backup_dir, backup_file)
     run, data = shakedown.run_command_on_master(cmd)
     assert run, 'Failed to validate backup file {}'.format(backup_url)
+    assert int(data.rstrip()) > 0, "Backup file is empty"
