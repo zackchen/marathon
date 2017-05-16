@@ -117,7 +117,7 @@ Marathon is in better compliance with various security best-practices. An exampl
 Marathon has a pluggable interface for secret store providers.
 Previous versions of Marathon allowed secrets to be passed as environment variables.
 With this version it is also possible to provide secrets as volumes, mounted under a specified path.
-See [file based secret documentation](http://mesosphere.github.io/marathon/docs/configure-file-secrets.html)
+See [file based secret documentation](http://mesosphere.github.io/marathon/docs/secrets.html)
 
 #### New secrets API and deprecating old API 
 To define an environment base secret, you should now use the new api and place the secret definition directly.
