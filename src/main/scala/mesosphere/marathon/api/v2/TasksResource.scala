@@ -53,7 +53,7 @@ class TasksResource @Inject() (
     val futureEnrichedTasks = async {
       val instancesBySpec = await(instanceTracker.instancesBySpec)
 
-      val instances = instancesBySpec.instancesMap.values.view.flatMap { appTasks =>
+      val instances = instancesBySpec.instancesMap.values.flatMap { appTasks =>
         appTasks.instances.map(i => appTasks.specId -> i)
       }
       val appIds = instancesBySpec.allSpecIdsWithInstances
@@ -71,23 +71,23 @@ class TasksResource @Inject() (
           healthCheckManager.statuses(appId)
         })).foldLeft(Map[Id, Seq[Health]]())(_ ++ _)
 
-      instances.flatMap {
-        case (appId, instance) =>
-          val app = appIdsToApps(appId)
-          if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition))) {
-            instance.tasksMap.values.map { task =>
-              EnrichedTask(
-                appId,
-                task,
-                instance.agentInfo,
-                health.getOrElse(instance.instanceId, Nil),
-                appToPorts.getOrElse(appId, Nil)
-              )
-            }
-          } else {
-            None
-          }
-      }.force
+      val enrichedTasks = for {
+        (appId, instance) <- instances
+        app <- appIdsToApps(appId)
+        if (isAuthorized(ViewRunSpec, app) && (conditionSet.isEmpty || conditionSet(instance.state.condition)))
+        tasks = instance.tasksMap.values
+      } yield {
+        tasks.map { task =>
+          EnrichedTask(
+            appId,
+            task,
+            instance.agentInfo,
+            health.getOrElse(instance.instanceId, Nil),
+            appToPorts.getOrElse(appId, Nil)
+          )
+        }
+      }
+      enrichedTasks.flatten
     }
 
     val enrichedTasks: Iterable[EnrichedTask] = result(futureEnrichedTasks)
