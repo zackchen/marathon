@@ -132,7 +132,7 @@ for apps:
   "env": {
     "MY_ENV": {
       "secret": {
-        "source": "/path/to/secret"
+        "source": "databasepassword"
       }
     },
     "DEPRECATED_WAY": {
@@ -141,7 +141,7 @@ for apps:
   },
   "secrets": {
     "deprecated-way-of-secret-refs": {
-      "source": "/path/to/secret"
+      "source": "servicepassword"
     }
   }
 }
@@ -155,7 +155,7 @@ for pods:
   "environment": {
     "MY_ENV": {
       "secret": {
-        "source": "/path/to/secret"
+        "source": "anotherpassword"
       }
     },
     "DEPRECATED_WAY": {
@@ -164,7 +164,7 @@ for pods:
   },
   "secrets": {
     "deprecated-way-of-secret-refs": {
-      "source": "/path/to/secret"
+      "source": "databasepassword"
     }
   }
 }
