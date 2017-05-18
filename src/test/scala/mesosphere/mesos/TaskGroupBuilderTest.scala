@@ -24,7 +24,8 @@ import scala.collection.breakOut
 class TaskGroupBuilderTest extends UnitTest with Inside {
   val defaultBuilderConfig = TaskGroupBuilder.BuilderConfig(
     acceptedResourceRoles = Set(ResourceRole.Unreserved),
-    envVarsPrefix = None)
+    envVarsPrefix = None,
+    mesosBridgeName = raml.Networks.DefaultMesosBridgeName)
 
   "A TaskGroupBuilder" must {
 
@@ -38,7 +39,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             Endpoint("port-2", containerPort = Some(2002), networkNames = List("2"))),
           List(
             Some(1001),
-            Some(1002)))
+            Some(1002)),
+          defaultBuilderConfig.mesosBridgeName)
 
         network1.getName shouldBe "1"
         inside(network1.getPortMappingsList.asScala.toList) {
@@ -706,6 +708,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val task1 = taskGroupInfo.getTasksList.find(_.getName == "Foo1").get
 
       val networkInfo = executorInfo.getContainer.getNetworkInfosList.get(0)
+      assert(networkInfo.getName() == defaultBuilderConfig.mesosBridgeName)
 
       val portMappings = networkInfo.getPortMappingsList
 
