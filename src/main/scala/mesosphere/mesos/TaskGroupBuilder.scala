@@ -125,6 +125,12 @@ object TaskGroupBuilder extends StrictLogging {
               b.addPortMappings(pm)
         }
         b.build
+      case bridgeNetwork: BridgeNetwork =>
+        val b = mesos.NetworkInfo.newBuilder
+          .setName("mesos-bridge") //TODO: (adju) This is the default name - need to consult with @avinash on what mesos expects here
+          .setLabels(bridgeNetwork.labels.toMesosLabels)
+        portMappings.foreach{ case (_, pm) => b.addPortMappings(pm) }
+        b.build()
     }
   }
 
