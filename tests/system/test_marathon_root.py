@@ -268,14 +268,10 @@ def test_app_secret_volume(secret_fixture):
         "container": {
             "type": "MESOS",
             "volumes": [{
-                "secret": {
-                    "source": secret_name
-                }
+                "secret": "secret1"
             }, {
                 "containerPath": secret_path,
-                "secret": {
-                    "source": secret_name
-                }
+                "secret": "secret1"
             }]
         },
         "portDefinitions": [{
@@ -283,7 +279,12 @@ def test_app_secret_volume(secret_fixture):
             "protocol": "tcp",
             "name": "api",
             "labels": {}
-        }]
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
     }
 
     client = marathon.create_client()
@@ -320,9 +321,7 @@ def test_app_secret_env_var(secret_fixture):
         "cmd": "echo $SECRET_ENV >> $MESOS_SANDBOX/secret-env && /opt/mesosphere/bin/python -m http.server $PORT_API",
         "env": {
             "SECRET_ENV": {
-                "secret": {
-                    "source": secret_name
-                }
+                "secret": "secret1"
             }
         },
         "portDefinitions": [{
@@ -330,7 +329,12 @@ def test_app_secret_env_var(secret_fixture):
             "protocol": "tcp",
             "name": "api",
             "labels": {}
-        }]
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
     }
 
     client = marathon.create_client()
@@ -380,14 +384,17 @@ def test_pod_secret_env_var(secret_fixture):
         }],
         "environment": {
             "SECRET_ENV": {
-                "secret": {
-                    "source": secret_name
-                }
+                "secret": "secret1"
             }
         },
         "networks": [{
             "mode": "host"
-        }]
+        }],
+        "secrets": {
+            "secret1": {
+                "source": secret_name
+            }
+        }
     }
 
     client = marathon.create_client()
@@ -446,10 +453,13 @@ def test_pod_secret_volume(secret_fixture):
         }],
         "volumes": [{
             "name": "vol",
-            "secret": {
+            "secret": "secret1"
+        }],
+        "secrets": {
+            "secret1": {
                 "source": secret_name
             }
-        }]
+        }
     }
 
     client = marathon.create_client()
