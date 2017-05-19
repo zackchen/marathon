@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.state.Secret
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.immutable.Map
@@ -11,8 +10,7 @@ trait EnvVarConversion {
     Writes {
       _.map {
         case (name, state.EnvVarString(v)) => name -> EnvVarValue(v)
-        case (name, state.EnvVarSecretRef(v)) => name -> EnvVarSecret(EnvVarSecretRef(v))
-        case (name, state.EnvVarSecretDef(v)) => name -> EnvVarSecret(SecretDef(v.source))
+        case (name, state.EnvVarSecretRef(secret: String)) => name -> EnvVarSecret(secret)
       }
     }
 
@@ -20,8 +18,7 @@ trait EnvVarConversion {
     Reads {
       _.map {
         case (name, EnvVarValue(v)) => name -> state.EnvVarString(v)
-        case (name, EnvVarSecret(v: EnvVarSecretRef)) => name -> state.EnvVarSecretRef(v.value)
-        case (name, EnvVarSecret(v: SecretDef)) => name -> state.EnvVarSecretDef(Secret(v.source))
+        case (name, EnvVarSecret(secret: String)) => name -> state.EnvVarSecretRef(secret)
       }
     }
 
@@ -33,7 +30,7 @@ trait EnvVarConversion {
         }(collection.breakOut)
 
         vanillaEnv ++ refs.withFilter(_.getType == Protos.EnvVarReference.Type.SECRET).map { secretRef =>
-          secretRef.getName -> EnvVarSecret(EnvVarSecretRef(secretRef.getSecretRef.getSecretId))
+          secretRef.getName -> EnvVarSecret(secretRef.getSecretRef.getSecretId)
         }
     }
 }

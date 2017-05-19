@@ -160,7 +160,7 @@ trait AppValidation {
     }
     val validSecretVolume = validator[AppSecretVolume] { v =>
       v.containerPath is optional(notEmpty)
-      v.secret.source is valid(notEmpty)
+      v.secret is valid(notEmpty)
     }
     val validPersistentVolume = {
       val notHaveConstraintsOnRoot = isTrue[PersistentVolume](
@@ -301,7 +301,6 @@ trait AppValidation {
       update.id.map(PathId(_)) as "id" is optional(valid)
       update.dependencies.map(_.map(PathId(_))) as "dependencies" is optional(every(valid))
       update.env is optional(envValidator(strictNameValidation = false, update.secrets.getOrElse(Map.empty), enabledFeatures))
-      update.env is optional(envValidator(strictNameValidation = false, update.env.getOrElse(Map.empty).collect { case (key, EnvVarSecret(s: SecretDef)) => key -> s }, enabledFeatures))
       update.secrets is optional({ secrets: Map[String, SecretDef] =>
         secrets.nonEmpty
       } -> (featureEnabled(enabledFeatures, Features.SECRETS)))

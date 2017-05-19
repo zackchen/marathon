@@ -20,7 +20,7 @@ import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{ MesosContainer, PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.raml.{ EnvVarSecret, EnvVarSecretRef, ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, PodSecretVolume, Raml, Resources, SecretDef }
+import mesosphere.marathon.raml.{ EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, Pod, PodSecretVolume, Raml, Resources }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ Timestamp, UnreachableStrategy }
 import mesosphere.marathon.test.Mockito
@@ -72,20 +72,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                       |       "volumeMounts": [ { "name": "vol", "mountPath": "mnt2" } ]
                       |     }
                       |   ],
-                      |   "volumes": [ { "name": "vol", "secret": { "source": "/path/to/my/secret" } } ]
-                      |  }
-                    """.stripMargin
-
-  val podSpecJsonWithEnvDefSecret = """
-                      | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
-                      |   [
-                      |     { "name": "webapp",
-                      |       "resources": { "cpus": 0.03, "mem": 64 },
-                      |       "image": { "kind": "DOCKER", "id": "busybox" },
-                      |       "exec": { "command": { "shell": "sleep 1" } }
-                      |     }
-                      |   ],
-                      |   "environment": { "vol": { "secret": { "source": "/path/to/my/secret" } } }
+                      |   "volumes": [ { "name": "vol", "secret": "secret1" } ],
+                      |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
                       |  }
                     """.stripMargin
 
@@ -96,9 +84,10 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                       |       "resources": { "cpus": 0.03, "mem": 64 },
                       |       "image": { "kind": "DOCKER", "id": "busybox" },
                       |       "exec": { "command": { "shell": "sleep 1" } },
-                      |       "environment": { "vol": { "secret": { "source": "/path/to/my/secret" } } }
+                      |       "environment": { "vol": { "secret": "secret1" } }
                       |     }
-                      |   ]
+                      |   ],
+                      |   "secrets": { "secret1": { "source": "/path/to/my/secret" } }
                       |  }
                     """.stripMargin
 
@@ -193,20 +182,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       }
     }
 
-    "The secrets feature is NOT enabled and create pod (that uses env secret defs) fails" in {
-      implicit val podSystem = mock[PodManager]
-      val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
-
-      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-
-      val response = f.podsResource.create(podSpecJsonWithEnvDefSecret.getBytes(), force = false, f.auth.request)
-
-      withClue(s"response body: ${response.getEntity}") {
-        response.getStatus should be(422)
-        response.getEntity.toString should include("use of secrets and secret-references in the environment")
-      }
-    }
-
     "The secrets feature is NOT enabled and create pod (that uses env secret defs on container level) fails" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
@@ -218,25 +193,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
         response.getEntity.toString should include("use of secrets and secret-references in the environment")
-      }
-    }
-
-    "The secrets feature is enabled and create pod (that uses env secret defs) succeeds" in {
-      implicit val podSystem = mock[PodManager]
-      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
-
-      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-
-      val response = f.podsResource.create(podSpecJsonWithEnvDefSecret.getBytes(), force = false, f.auth.request)
-
-      withClue(s"response body: ${response.getEntity}") {
-        response.getStatus should be(201)
-        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-        parsedResponse should be (defined)
-        val maybePod = parsedResponse.map(_.as[Pod])
-        maybePod should be (defined) // validate that we DID get back a pod definition
-        val pod = maybePod.get
-        pod.environment("vol") shouldBe EnvVarSecret(SecretDef("/path/to/my/secret"))
       }
     }
 
@@ -255,7 +211,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
-        pod.containers(0).environment("vol") shouldBe EnvVarSecret(SecretDef("/path/to/my/secret"))
+        pod.containers(0).environment("vol") shouldBe EnvVarSecret("secret1")
       }
     }
 
@@ -274,7 +230,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
-        pod.containers(0).environment("vol") shouldBe EnvVarSecret(EnvVarSecretRef("secret1"))
+        pod.containers(0).environment("vol") shouldBe EnvVarSecret("secret1")
       }
     }
 
@@ -293,7 +249,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
         val pod = maybePod.get
-        pod.volumes(0) shouldBe PodSecretVolume("vol", SecretDef("/path/to/my/secret"))
+        pod.volumes(0) shouldBe PodSecretVolume("vol", "secret1")
       }
     }
 

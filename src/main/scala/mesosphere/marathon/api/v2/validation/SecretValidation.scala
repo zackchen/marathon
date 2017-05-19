@@ -4,22 +4,20 @@ package api.v2.validation
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{ EnvVarSecret, EnvVarSecretRef, EnvVarValue, EnvVarValueOrSecret, SecretDef }
+import mesosphere.marathon.raml.{ EnvVarSecret, EnvVarValue, EnvVarValueOrSecret, SecretDef }
 
 trait SecretValidation {
   import Validation._
 
   def stringify(ref: EnvVarValueOrSecret): String =
     ref match {
-      case EnvVarSecret(secretRef: EnvVarSecretRef) => secretRef.value
-      case EnvVarSecret(secretDef: SecretDef) => secretDef.source
+      case EnvVarSecret(ref: String) => ref
       case EnvVarValue(value: String) => value // this should never be called; if it is, validation output will not be friendly
     }
 
   def secretValidator(secrets: Map[String, EnvVarSecret]) = validator[(String, EnvVarValueOrSecret)] { entry =>
     entry._2 as stringify(entry._2) is isTrue("references an undefined secret"){
-      case EnvVarSecret(ref: EnvVarSecretRef) => secrets.contains(ref.value)
-      case EnvVarSecret(secretDef: SecretDef) => true
+      case EnvVarSecret(ref: String) => secrets.contains(ref)
       case _ => true
     }
   }

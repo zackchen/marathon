@@ -134,7 +134,7 @@ trait AppVolumeSpec {
   */
 trait AppSecretVolumeSpec extends AppVolumeSpec {
 
-  val secret: Secret
+  val secret: String
 }
 
 /**
@@ -150,7 +150,7 @@ trait PodVolumeSpec {
   */
 trait PodSecretVolumeSpec extends PodVolumeSpec {
 
-  val secret: Secret
+  val secret: String
 }
 
 /**

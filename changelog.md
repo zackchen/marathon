@@ -119,58 +119,6 @@ Previous versions of Marathon allowed secrets to be passed as environment variab
 With this version it is also possible to provide secrets as volumes, mounted under a specified path.
 See [file based secret documentation](http://mesosphere.github.io/marathon/docs/secrets.html)
 
-#### New secrets API and deprecating old API 
-To define an environment base secret, you should now use the new api and place the secret definition directly.
-Shown in the example as `MY_ENV`. Using secret references is now deprecated and will be removed in the next marathon release.
-Shown in the example as `DEPRECATED_WAY`.
-
-for apps:
-
-```
-{
-  ...
-  "env": {
-    "MY_ENV": {
-      "secret": {
-        "source": "databasepassword"
-      }
-    },
-    "DEPRECATED_WAY": {
-      "secret": "deprecated-way-of-secret-refs"
-    }
-  },
-  "secrets": {
-    "deprecated-way-of-secret-refs": {
-      "source": "servicepassword"
-    }
-  }
-}
-```
-
-for pods:
-
-```
-{
-  ...
-  "environment": {
-    "MY_ENV": {
-      "secret": {
-        "source": "anotherpassword"
-      }
-    },
-    "DEPRECATED_WAY": {
-      "secret": "deprecated-way-of-secret-refs"
-    }
-  },
-  "secrets": {
-    "deprecated-way-of-secret-refs": {
-      "source": "databasepassword"
-    }
-  }
-}
-```
-
-
 
 ## Changes from 1.4.1 to 1.4.2
 Bugfix release

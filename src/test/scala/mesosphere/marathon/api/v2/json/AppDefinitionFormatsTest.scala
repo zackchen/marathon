@@ -574,11 +574,6 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "env": {
           |    "env1": "value",
           |    "env2": {
-          |      "secret": {
-          |        "source": "/path/to/secret"
-          |      }
-          |    },
-          |    "env3": {
           |      "secret": "secret1"
           |    }
           |  }
@@ -586,15 +581,8 @@ class AppDefinitionFormatsTest extends UnitTest
 
       app.secrets("secret1").source should equal("/foo")
       app.env("env1") shouldBe a[raml.EnvVarValue]
-      app.env("env3") shouldBe a[raml.EnvVarSecret]
-      app.env("env3").asInstanceOf[EnvVarSecret].secret shouldBe a[raml.EnvVarSecretRef]
-      val secretRef = app.env("env3").asInstanceOf[EnvVarSecret].secret.asInstanceOf[raml.EnvVarSecretRef]
-      secretRef.value should equal("secret1")
-
       app.env("env2") shouldBe a[raml.EnvVarSecret]
-      app.env("env2").asInstanceOf[EnvVarSecret].secret shouldBe a[raml.SecretDef]
-      val secretDef = app.env("env2").asInstanceOf[EnvVarSecret].secret.asInstanceOf[raml.SecretDef]
-      secretDef.source should equal("/path/to/secret")
+      app.env("env2").asInstanceOf[EnvVarSecret].secret should equal("secret1")
     }
 
     "ToJSON should serialize secrets" in {

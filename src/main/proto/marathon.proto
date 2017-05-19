@@ -346,7 +346,7 @@ message Volume {
 
   // Defining properties of secret volumes
   message SecretVolumeInfo {
-    required string source = 1;
+    required string secret = 1;
   }
 
   required mesos.Volume.Mode mode = 3;

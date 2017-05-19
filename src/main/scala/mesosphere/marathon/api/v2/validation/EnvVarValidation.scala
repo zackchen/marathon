@@ -47,7 +47,7 @@ trait EnvVarValidation {
         } == 0
       else true
     },
-    every(SecretValidation.secretValidator(secrets.map(v => v._1 -> EnvVarSecret(v._2))))
+    every(SecretValidation.secretValidator(secrets.map(v => v._1 -> EnvVarSecret(v._2.source))))
   )
 }
 

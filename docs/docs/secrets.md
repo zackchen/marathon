@@ -22,9 +22,12 @@ It is possible to define secrets with a given environment variable name. They ca
   "cmd": "sleep 100",
   "env": {
     "DATABASE_PW": { 
-      "secret": {
-        "source": "databasepassword"
-      }
+      "secret": "secretpassword"
+    }
+  },
+  "secrets": {
+    "secretpassword": {
+      "source": "databasepassword"
     }
   }
 }
@@ -51,6 +54,11 @@ It is possible to define secrets with a given environment variable name. They ca
         "source": "databasepassword"
       }
     }
+  },
+  "secrets": {
+    "secretpassword": {
+      "source": "databasepassword"
+    }
   }
 }
 ```
@@ -69,11 +77,14 @@ It is possible to define secrets with a given mount path. They can be interprete
     "volumes": [
       {
         "containerPath": "path",
-        "secret": {
-          "source": "databasepassword"
-        }
+        "secret": "secretpassword"
       }
     ]
+  },
+  "secrets": {
+    "secretpassword": {
+      "source": "databasepassword"
+    }
   }
 }
 ```
@@ -102,10 +113,13 @@ It is possible to define secrets with a given mount path. They can be interprete
   "volumes": [
     {
       "name": "secretvolume",
-      "secret": {
-        "source": "databasepassword"
-      }
+      "secret": "secretpassword"
     }
-  ]
+  ],
+  "secrets": {
+    "secretpassword": {
+      "source": "databasepassword"
+    }
+  }
 }
 ```

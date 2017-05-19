@@ -146,7 +146,7 @@ object VolumeSerializer {
       Protos.Volume.newBuilder()
         .setContainerPath(s.containerPath)
         .setSecret(
-          Protos.Volume.SecretVolumeInfo.newBuilder().setSource(s.secret.source).build()
+          Protos.Volume.SecretVolumeInfo.newBuilder().setSecret(s.secret).build()
         )
         .setMode(s.mode)
         .build()

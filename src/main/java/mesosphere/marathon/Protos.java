@@ -34549,18 +34549,18 @@ public final class Protos {
         com.google.protobuf.MessageOrBuilder {
 
       /**
-       * <code>required string source = 1;</code>
+       * <code>required string secret = 1;</code>
        */
-      boolean hasSource();
+      boolean hasSecret();
       /**
-       * <code>required string source = 1;</code>
+       * <code>required string secret = 1;</code>
        */
-      java.lang.String getSource();
+      java.lang.String getSecret();
       /**
-       * <code>required string source = 1;</code>
+       * <code>required string secret = 1;</code>
        */
       com.google.protobuf.ByteString
-          getSourceBytes();
+          getSecretBytes();
     }
     /**
      * Protobuf type {@code mesosphere.marathon.Volume.SecretVolumeInfo}
@@ -34621,7 +34621,7 @@ public final class Protos {
               case 10: {
                 com.google.protobuf.ByteString bs = input.readBytes();
                 bitField0_ |= 0x00000001;
-                source_ = bs;
+                secret_ = bs;
                 break;
               }
             }
@@ -34664,19 +34664,19 @@ public final class Protos {
       }
 
       private int bitField0_;
-      public static final int SOURCE_FIELD_NUMBER = 1;
-      private java.lang.Object source_;
+      public static final int SECRET_FIELD_NUMBER = 1;
+      private java.lang.Object secret_;
       /**
-       * <code>required string source = 1;</code>
+       * <code>required string secret = 1;</code>
        */
-      public boolean hasSource() {
+      public boolean hasSecret() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required string source = 1;</code>
+       * <code>required string secret = 1;</code>
        */
-      public java.lang.String getSource() {
-        java.lang.Object ref = source_;
+      public java.lang.String getSecret() {
+        java.lang.Object ref = secret_;
         if (ref instanceof java.lang.String) {
           return (java.lang.String) ref;
         } else {
@@ -34684,22 +34684,22 @@ public final class Protos {
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
-            source_ = s;
+            secret_ = s;
           }
           return s;
         }
       }
       /**
-       * <code>required string source = 1;</code>
+       * <code>required string secret = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getSourceBytes() {
-        java.lang.Object ref = source_;
+          getSecretBytes() {
+        java.lang.Object ref = secret_;
         if (ref instanceof java.lang.String) {
           com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
-          source_ = b;
+          secret_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
@@ -34707,7 +34707,7 @@ public final class Protos {
       }
 
       private void initFields() {
-        source_ = "";
+        secret_ = "";
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -34715,7 +34715,7 @@ public final class Protos {
         if (isInitialized == 1) return true;
         if (isInitialized == 0) return false;
 
-        if (!hasSource()) {
+        if (!hasSecret()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -34727,7 +34727,7 @@ public final class Protos {
                           throws java.io.IOException {
         getSerializedSize();
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          output.writeBytes(1, getSourceBytes());
+          output.writeBytes(1, getSecretBytes());
         }
         getUnknownFields().writeTo(output);
       }
@@ -34740,7 +34740,7 @@ public final class Protos {
         size = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(1, getSourceBytes());
+            .computeBytesSize(1, getSecretBytes());
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -34863,7 +34863,7 @@ public final class Protos {
 
         public Builder clear() {
           super.clear();
-          source_ = "";
+          secret_ = "";
           bitField0_ = (bitField0_ & ~0x00000001);
           return this;
         }
@@ -34896,7 +34896,7 @@ public final class Protos {
           if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
             to_bitField0_ |= 0x00000001;
           }
-          result.source_ = source_;
+          result.secret_ = secret_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -34913,9 +34913,9 @@ public final class Protos {
 
         public Builder mergeFrom(mesosphere.marathon.Protos.Volume.SecretVolumeInfo other) {
           if (other == mesosphere.marathon.Protos.Volume.SecretVolumeInfo.getDefaultInstance()) return this;
-          if (other.hasSource()) {
+          if (other.hasSecret()) {
             bitField0_ |= 0x00000001;
-            source_ = other.source_;
+            secret_ = other.secret_;
             onChanged();
           }
           this.mergeUnknownFields(other.getUnknownFields());
@@ -34923,7 +34923,7 @@ public final class Protos {
         }
 
         public final boolean isInitialized() {
-          if (!hasSource()) {
+          if (!hasSecret()) {
             
             return false;
           }
@@ -34949,24 +34949,24 @@ public final class Protos {
         }
         private int bitField0_;
 
-        private java.lang.Object source_ = "";
+        private java.lang.Object secret_ = "";
         /**
-         * <code>required string source = 1;</code>
+         * <code>required string secret = 1;</code>
          */
-        public boolean hasSource() {
+        public boolean hasSecret() {
           return ((bitField0_ & 0x00000001) == 0x00000001);
         }
         /**
-         * <code>required string source = 1;</code>
+         * <code>required string secret = 1;</code>
          */
-        public java.lang.String getSource() {
-          java.lang.Object ref = source_;
+        public java.lang.String getSecret() {
+          java.lang.Object ref = secret_;
           if (!(ref instanceof java.lang.String)) {
             com.google.protobuf.ByteString bs =
                 (com.google.protobuf.ByteString) ref;
             java.lang.String s = bs.toStringUtf8();
             if (bs.isValidUtf8()) {
-              source_ = s;
+              secret_ = s;
             }
             return s;
           } else {
@@ -34974,53 +34974,53 @@ public final class Protos {
           }
         }
         /**
-         * <code>required string source = 1;</code>
+         * <code>required string secret = 1;</code>
          */
         public com.google.protobuf.ByteString
-            getSourceBytes() {
-          java.lang.Object ref = source_;
+            getSecretBytes() {
+          java.lang.Object ref = secret_;
           if (ref instanceof String) {
             com.google.protobuf.ByteString b = 
                 com.google.protobuf.ByteString.copyFromUtf8(
                     (java.lang.String) ref);
-            source_ = b;
+            secret_ = b;
             return b;
           } else {
             return (com.google.protobuf.ByteString) ref;
           }
         }
         /**
-         * <code>required string source = 1;</code>
+         * <code>required string secret = 1;</code>
          */
-        public Builder setSource(
+        public Builder setSecret(
             java.lang.String value) {
           if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-          source_ = value;
+          secret_ = value;
           onChanged();
           return this;
         }
         /**
-         * <code>required string source = 1;</code>
+         * <code>required string secret = 1;</code>
          */
-        public Builder clearSource() {
+        public Builder clearSecret() {
           bitField0_ = (bitField0_ & ~0x00000001);
-          source_ = getDefaultInstance().getSource();
+          secret_ = getDefaultInstance().getSecret();
           onChanged();
           return this;
         }
         /**
-         * <code>required string source = 1;</code>
+         * <code>required string secret = 1;</code>
          */
-        public Builder setSourceBytes(
+        public Builder setSecretBytes(
             com.google.protobuf.ByteString value) {
           if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-          source_ = value;
+          secret_ = value;
           onChanged();
           return this;
         }
@@ -48172,7 +48172,7 @@ public final class Protos {
       "ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n\004name" +
       "\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007options\030\004 \003(" +
       "\0132\014.mesos.Label\032\"\n\020SecretVolumeInfo\022\016\n\006s" +
-      "ource\030\001 \002(\t\"\274\001\n\016StorageVersion\022\r\n\005major\030" +
+      "ecret\030\001 \002(\t\"\274\001\n\016StorageVersion\022\r\n\005major\030" +
       "\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006f" +
       "ormat\030\004 \001(\01621.mesosphere.marathon.Storag",
       "eVersion.StorageFormat:\006LEGACY\"2\n\rStorag" +
@@ -48387,7 +48387,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_Volume_SecretVolumeInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_mesosphere_marathon_Volume_SecretVolumeInfo_descriptor,
-        new java.lang.String[] { "Source", });
+        new java.lang.String[] { "Secret", });
     internal_static_mesosphere_marathon_StorageVersion_descriptor =
       getDescriptor().getMessageTypes().get(15);
     internal_static_mesosphere_marathon_StorageVersion_fieldAccessorTable = new

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.pod
-import mesosphere.marathon.state.{ DiskType, ExternalVolumeInfo, PersistentVolumeInfo, Secret, SecretVolume }
+import mesosphere.marathon.state.{ DiskType, ExternalVolumeInfo, PersistentVolumeInfo, SecretVolume }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{ Protos => Mesos }
@@ -16,13 +16,13 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         case None => core.pod.EphemeralVolume(ev.name)
       }
     case sv: PodSecretVolume =>
-      core.pod.SecretVolume(sv.name, Secret(sv.secret.source))
+      core.pod.SecretVolume(sv.name, sv.secret)
   }
 
   implicit val volumeRamlWriter: Writes[pod.Volume, PodVolume] = Writes {
     case e: pod.EphemeralVolume => raml.EphemeralVolume(e.name)
     case h: pod.HostVolume => raml.EphemeralVolume(h.name, Some(h.hostPath))
-    case s: pod.SecretVolume => PodSecretVolume(s.name, SecretDef(s.secret.source))
+    case s: pod.SecretVolume => PodSecretVolume(s.name, s.secret)
   }
 
   implicit val volumeModeWrites: Writes[Mesos.Volume.Mode, ReadMode] = Writes {
@@ -65,7 +65,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         mode = volume.mode.toRaml)
       case sv: state.SecretVolume => AppSecretVolume(
         if (volume.containerPath.length > 0) Some(volume.containerPath) else None,
-        secret = SecretDef(sv.secret.source)
+        secret = sv.secret
       )
     }
   }
@@ -122,7 +122,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumeSecretReads: Reads[AppSecretVolume, state.Volume] = Reads { vol =>
-    SecretVolume(vol.containerPath.getOrElse(vol.secret.source), Secret(vol.secret.source))
+    SecretVolume(vol.containerPath.getOrElse(vol.secret), vol.secret)
   }
 
   implicit val appVolumeExternalProtoRamlWriter: Writes[Protos.Volume.ExternalVolumeInfo, ExternalVolume] = Writes { vol =>
@@ -167,7 +167,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     )
     case vol if vol.hasSecret => AppSecretVolume(
       containerPath = if (vol.hasContainerPath) Some(vol.getContainerPath) else None,
-      secret = SecretDef(vol.getSecret.getSource)
+      secret = vol.getSecret.getSecret
     )
     case vol => AppDockerVolume(
       containerPath = vol.getContainerPath,

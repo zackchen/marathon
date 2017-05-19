@@ -1,7 +1,6 @@
 #%RAML 1.0 Library
 uses:
   strings: stringTypes.raml
-  secrets: secrets.raml
   pragma: pragma.raml
 types:
   EnvVarValue:
@@ -11,14 +10,10 @@ types:
     description: An environment variable set to a secret
     properties:
       secret:
-        type: EnvVarSecretRefOrSecretDef
+        type: string
         description: |
           The name of the secret to refer to. At runtime, the value of the
           secret will be injected into the value of the variable.
-  EnvVarSecretRefOrSecretDef: (secrets.SecretDef | EnvVarSecretRef)
-  EnvVarSecretRef:
-    type: string
-    (pragma.deprecated): Deprecated in favor of secrets.SecretDef
   EnvVarValueOrSecret: (EnvVarValue | EnvVarSecret)
   EnvVars:
     type: object

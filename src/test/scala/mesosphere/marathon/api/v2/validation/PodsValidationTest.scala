@@ -4,7 +4,7 @@ package api.v2.validation
 import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
 import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, EnvVarSecret, EnvVarSecretRef, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, Resources, SecretDef, VolumeMount }
+import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, EnvVarSecret, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, Resources, SecretDef, VolumeMount }
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
@@ -28,7 +28,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
 
     "be accepted if secrets defined" in new Fixture {
       val secretValidator: Validator[Pod] = podDefValidator(Set(Features.SECRETS), SemanticVersion.zero)
-      private val valid = validPod.copy(secrets = Map("secret1" -> SecretDef(source = "/foo")), environment = Map("TEST" -> EnvVarSecret(EnvVarSecretRef("secret1"))))
+      private val valid = validPod.copy(secrets = Map("secret1" -> SecretDef(source = "/foo")), environment = Map("TEST" -> EnvVarSecret("secret1")))
       secretValidator(valid) shouldBe aSuccess
     }
 

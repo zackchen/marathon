@@ -539,7 +539,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.EnvVarSecretRef("foo"))))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -566,7 +566,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.EnvVarSecretRef("foo"))))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -579,39 +579,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("references an undefined secret")
     }
 
-    "Create a new app (that uses secret def) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
-      Given("The secrets feature is enabled")
-
-      And("An app with a secret and an envvar secret-ref")
-      val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.SecretDef("foo"))))
-      val (body, plan) = prepareApp(app, groupManager)
-
-      When("The create request is made")
-      clock += 5.seconds
-      val response = appsResource.create(body, force = false, auth.request)
-
-      Then("It is successful")
-      response.getStatus should be(201)
-      response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
-
-      And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-      )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
-    }
-
     "Create a new app (that uses file based secret) successfully" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
-        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume(Some("/path"), SecretDef("foo"))))))
+        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume(Some("/path"), "foo")))))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -641,7 +614,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.EnvVarSecretRef("foo"))))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -660,7 +633,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       And("An app with an envvar secret-def")
       val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret(raml.SecretDef("foo"))))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -678,7 +651,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       config.isFeatureSet(Features.SECRETS) should be(false)
 
       And("An app with an envvar secret-def")
-      val secretVolume = AppSecretVolume(None, SecretDef("/bar"))
+      val secretVolume = AppSecretVolume(None, "/bar")
       val containers = raml.Container(`type` = EngineType.Mesos, volumes = Seq(secretVolume))
       val app = App(id = "/app", cmd = Some("cmd"),
         container = Option(containers)
