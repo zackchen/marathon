@@ -684,7 +684,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
             endpoints = Seq(
               raml.Endpoint(
                 name = "foo2",
-                hostPort = Some(1202), // TODO should be changed to random port in this test
+                hostPort = Some(0),
                 containerPort = Some(1212)
               )
             )
