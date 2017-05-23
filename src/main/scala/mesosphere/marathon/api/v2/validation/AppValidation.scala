@@ -159,7 +159,7 @@ trait AppValidation {
       v.hostPath is valid(definedAnd(notEmpty))
     }
     val validSecretVolume = validator[AppSecretVolume] { v =>
-      v.containerPath is optional(notEmpty)
+      v.containerPath is notEmpty
       v.secret is valid(notEmpty)
     }
     val validPersistentVolume = {
