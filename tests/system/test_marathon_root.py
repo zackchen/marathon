@@ -28,17 +28,16 @@ def marathon_service_name():
     shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
     yield 'marathon'
     shakedown.wait_for_service_endpoint('marathon', timedelta(minutes=5).total_seconds())
-    #clear_marathon()
+    clear_marathon()
 
 
 def setup_module(module):
     common.cluster_info()
-    #clear_marathon()
+    clear_marathon()
 
 
 def teardown_module(module):
-    None
-    #clear_marathon()
+    clear_marathon()
 
 ##################
 # Root specific tests
@@ -248,11 +247,11 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 def test_app_secret_volume(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
     # if not common.is_enterprise_cli_package_installed():
-        # common.install_enterprise_cli_package()
+    # common.install_enterprise_cli_package()
 
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')
-    secret_path = 'mysecretpath'
+    secret_container_path = 'mysecretpath'
 
     app_id = '/app-{}-{}'.format(secret_normalized_name, randint(100,999))
 
@@ -263,14 +262,12 @@ def test_app_secret_volume(secret_fixture):
         "instances": 1,
         "cpus": 0.1,
         "mem": 64,
-        "cmd": "cat {} >> {}_file && cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".
-            format(secret_normalized_name, secret_normalized_name, secret_path, secret_normalized_name),
+        "cmd": "cat {} >> {}_file && /opt/mesosphere/bin/python -m http.server $PORT_API".
+            format(secret_container_path, secret_container_path),
         "container": {
             "type": "MESOS",
             "volumes": [{
-                "secret": "secret1"
-            }, {
-                "containerPath": secret_path,
+                "containerPath": secret_container_path,
                 "secret": "secret1"
             }]
         },
@@ -297,12 +294,12 @@ def test_app_secret_volume(secret_fixture):
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
     # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
-    cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
+    cmd = "curl {}:{}/{}_file".format(host, port, secret_container_path)
     run, data = shakedown.run_command_on_master(cmd)
 
     assert run, "{} did not succeed".format(cmd)
     # secret_value is cat two times to the file, therefore we expect two times the value of secret in data
-    assert data == "{}{}".format(secret_value, secret_value)
+    assert data == "{}".format(secret_value)
 
 
 def test_app_secret_env_var(secret_fixture):
