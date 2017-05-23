@@ -18,7 +18,6 @@ from shakedown import (masters, required_masters, public_agents, required_public
                         dcos_1_9, marthon_version_less_than, marthon_version_less_than)
 
 from datetime import timedelta
-from random import randint
 
 pytestmark = [pytest.mark.usefixtures('marathon_service_name')]
 
@@ -188,11 +187,11 @@ def test_external_volume():
         # Clean up after the test: external volumes are not destroyed by marathon or dcos
         # and have to be cleaned manually.
         agent = shakedown.get_private_agents()[0]
-        result, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))  # NOQA
+        status, output = shakedown.run_command_on_agent(agent, 'sudo /opt/mesosphere/bin/dvdcli remove --volumedriver=rexray --volumename={}'.format(volume_name))  # NOQA
         # Note: Removing the volume might fail sometimes because EC2 takes some time (~10min) to recognize that
         # the volume is not in use anymore hence preventing it's removal. This is a known pitfall: we log the error
         # and the volume should be cleaned up manually later.
-        if not result:
+        if not status:
             print('WARNING: Failed to remove external volume with name={}: {}'.format(volume_name, output))
 
 
@@ -239,12 +238,13 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     # Check if the backup file exits and is valid
     cmd = 'tar -tf {}/{} | wc -l'.format(backup_dir, backup_file)
-    run, data = shakedown.run_command_on_master(cmd)
-    assert run, 'Failed to validate backup file {}'.format(backup_url)
+    status, data = shakedown.run_command_on_master(cmd)
+    assert status, 'Failed to validate backup file {}'.format(backup_url)
     assert int(data.rstrip()) > 0, "Backup file is empty"
 
 
-def test_app_secret_volume(secret_fixture):
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+def test_app_file_based_secret(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
     # if not common.is_enterprise_cli_package_installed():
     # common.install_enterprise_cli_package()
@@ -253,8 +253,7 @@ def test_app_secret_volume(secret_fixture):
     secret_normalized_name = secret_name.replace('/', '')
     secret_container_path = 'mysecretpath'
 
-    app_id = '/app-{}-{}'.format(secret_normalized_name, randint(100,999))
-
+    app_id = uuid.uuid4().hex
     # In case you're wondering about the `cmd`: secrets are mounted via tmpfs inside
     # the container and are not visible outside, hence the intermediate file
     app_def = {
@@ -289,17 +288,16 @@ def test_app_secret_volume(secret_fixture):
     shakedown.deployment_wait()
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, 'Failed to start the file based secret app'
 
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
     # The secret by default is saved in $MESOS_SANDBOX/.secrets/path/to/secret
     cmd = "curl {}:{}/{}_file".format(host, port, secret_container_path)
-    run, data = shakedown.run_command_on_master(cmd)
+    status, data = shakedown.run_command_on_master(cmd)
 
-    assert run, "{} did not succeed".format(cmd)
-    # secret_value is cat two times to the file, therefore we expect two times the value of secret in data
-    assert data == "{}".format(secret_value)
+    assert status, "{} did not succeed".format(cmd)
+    assert data == secret_value
 
 
 def test_app_secret_env_var(secret_fixture):
@@ -309,7 +307,7 @@ def test_app_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
 
-    app_id = '/app-{}-{}'.format(secret_name.replace('/', ''), randint(100,999))
+    app_id = uuid.uuid4().hex
     app_def = {
         "id": app_id,
         "instances": 1,
@@ -339,14 +337,14 @@ def test_app_secret_env_var(secret_fixture):
     shakedown.deployment_wait()
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1
+    assert len(tasks) == 1, 'Failed to start the secret environment variable app'
 
     port = tasks[0]['ports'][0]
     host = tasks[0]['host']
     cmd = "curl {}:{}/secret-env".format(host, port)
-    run, data = shakedown.run_command_on_master(cmd)
+    status, data = shakedown.run_command_on_master(cmd)
 
-    assert run, "{} did not succeed".format(cmd)
+    assert status, "{} did not succeed".format(cmd)
     assert data.rstrip() == secret_value
 
 
@@ -357,7 +355,7 @@ def test_pod_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
 
-    pod_id = '/pod-{}-{}'.format(secret_name.replace('/', ''), randint(100,999))
+    pod_id = uuid.uuid4().hex
     pod_def = {
         "id": pod_id,
         "containers": [{
@@ -399,18 +397,19 @@ def test_pod_secret_env_var(secret_fixture):
     shakedown.deployment_wait()
 
     instances = client.show_pod(pod_id)['instances']
-    assert len(instances) == 1
+    assert len(instances) == 1, 'Failed to start the secret environment variable pod'
 
     port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/secret-env".format(host, port)
-    run, data = shakedown.run_command_on_master(cmd)
+    status, data = shakedown.run_command_on_master(cmd)
 
-    assert run, "{} did not succeed".format(cmd)
+    assert status, "{} did not succeed".format(cmd)
     assert data.rstrip() == secret_value
 
 
-def test_pod_secret_volume(secret_fixture):
+@pytest.mark.skipif('marthon_version_less_than("1.5")')
+def test_pod_file_based_secret(secret_fixture):
     # Install enterprise-cli since it's needed to create secrets
     if not common.is_enterprise_cli_package_installed():
         common.install_enterprise_cli_package()
@@ -418,7 +417,7 @@ def test_pod_secret_volume(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')
 
-    pod_id = '/pod-{}-{}'.format(secret_name.replace('/', ''), randint(100,999))
+    pod_id = uuid.uuid4().hex
 
     pod_def = {
         "id": pod_id,
@@ -464,14 +463,14 @@ def test_pod_secret_volume(secret_fixture):
     shakedown.deployment_wait()
 
     instances = client.show_pod(pod_id)['instances']
-    assert len(instances) == 1
+    assert len(instances) == 1, 'Failed to start the file based secret pod'
 
     port = instances[0]['containers'][0]['endpoints'][0]['allocatedHostPort']
     host = instances[0]['networks'][0]['addresses'][0]
     cmd = "curl {}:{}/{}_file".format(host, port, secret_normalized_name)
-    run, data = shakedown.run_command_on_master(cmd)
+    status, data = shakedown.run_command_on_master(cmd)
 
-    assert run, "{} did not succeed".format(cmd)
+    assert status, "{} did not succeed".format(cmd)
     assert data.rstrip() == secret_value
 
 
