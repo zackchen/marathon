@@ -77,7 +77,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                       |  }
                     """.stripMargin
 
-  val podSpecJsonWithEnvDefSecretOnContainerLevel = """
+  val podSpecJsonWithEnvRefSecretOnContainerLevel = """
                       | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
                       |   [
                       |     { "name": "webapp",
@@ -101,20 +101,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
                       |     }
                       |   ],
                       |   "environment": { "vol": { "secret": "secret1" } },
-                      |   "secrets": { "secret1": { "source": "/foo" } }
-                      |  }
-                    """.stripMargin
-
-  val podSpecJsonWithEnvRefSecretOnContainerLevel = """
-                      | { "id": "/mypod", "networks": [ { "mode": "host" } ], "containers":
-                      |   [
-                      |     { "name": "webapp",
-                      |       "resources": { "cpus": 0.03, "mem": 64 },
-                      |       "image": { "kind": "DOCKER", "id": "busybox" },
-                      |       "exec": { "command": { "shell": "sleep 1" } },
-                      |       "environment": { "vol": { "secret": "secret1" } }
-                      |     }
-                      |   ],
                       |   "secrets": { "secret1": { "source": "/foo" } }
                       |  }
                     """.stripMargin
@@ -182,36 +168,17 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
       }
     }
 
-    "The secrets feature is NOT enabled and create pod (that uses env secret defs on container level) fails" in {
+    "The secrets feature is NOT enabled and create pod (that uses env secret refs on container level) fails" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-      val response = f.podsResource.create(podSpecJsonWithEnvDefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
+      val response = f.podsResource.create(podSpecJsonWithEnvRefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
         response.getEntity.toString should include("use of secrets and secret-references in the environment")
-      }
-    }
-
-    "The secrets feature is enabled and create pod (that uses env secret defs on container level) succeeds" in {
-      implicit val podSystem = mock[PodManager]
-      val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
-
-      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-
-      val response = f.podsResource.create(podSpecJsonWithEnvDefSecretOnContainerLevel.getBytes(), force = false, f.auth.request)
-
-      withClue(s"response body: ${response.getEntity}") {
-        response.getStatus should be(201)
-        val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-        parsedResponse should be (defined)
-        val maybePod = parsedResponse.map(_.as[Pod])
-        maybePod should be (defined) // validate that we DID get back a pod definition
-        val pod = maybePod.get
-        pod.containers(0).environment("vol") shouldBe EnvVarSecret("secret1")
       }
     }
 

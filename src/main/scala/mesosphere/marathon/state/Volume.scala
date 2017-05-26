@@ -349,6 +349,5 @@ case class SecretVolume(
 object SecretVolume {
   def validSecretVolume(enabledFeatures: Set[String]): Validator[SecretVolume] = validator[SecretVolume] { ev =>
     ev is featureEnabled(enabledFeatures, Features.SECRETS)
-    ev.containerPath is notEmpty
   }
 }

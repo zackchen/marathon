@@ -75,6 +75,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     case v: AppPersistentVolume => volumePersistentReads.read(v)
     case v: AppDockerVolume => volumeDockerReads.read(v)
     case v: AppSecretVolume => volumeSecretReads.read(v)
+    case unsupported => throw SerializationFailedException(s"unsupported app volume type $unsupported")
   }
 
   implicit val volumeExternalReads: Reads[AppExternalVolume, state.Volume] = Reads { vol =>
@@ -172,6 +173,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       hostPath = vol.getHostPath,
       mode = vol.getMode.toRaml
     )
+    case unsupported => throw SerializationFailedException(s"unsupported pod volume type $unsupported")
   }
 }
 

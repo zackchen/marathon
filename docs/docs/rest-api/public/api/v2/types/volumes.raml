@@ -134,6 +134,7 @@ types:
         description: Name of the pod level volume
       secret:
         type: string
+        minLength: 1
         description: References the secret that is used by this volume
   PodVolume:
     type: PodSecretVolume | EphemeralVolume

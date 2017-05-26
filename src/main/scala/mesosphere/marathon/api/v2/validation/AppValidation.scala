@@ -158,10 +158,6 @@ trait AppValidation {
       v.containerPath is valid(notEmpty)
       v.hostPath is valid(notEmpty)
     }
-    val validSecretVolume = validator[AppSecretVolume] { v =>
-      v.containerPath is notEmpty
-      v.secret is valid(notEmpty)
-    }
     val validPersistentVolume = {
       val notHaveConstraintsOnRoot = isTrue[PersistentVolume](
         "Constraints on root volumes are not supported") { info =>
@@ -241,7 +237,7 @@ trait AppValidation {
         case v: AppDockerVolume => validate(v)(validHostVolume)
         case v: AppPersistentVolume => validate(v)(validPersistentVolume)
         case v: AppExternalVolume => validate(v)(validExternalVolume)
-        case v: AppSecretVolume => validate(v)(validSecretVolume)
+        case v: AppSecretVolume => Success // Non emptyness of properties already validated in raml
         case _ => Failure(Set(RuleViolation(v, "Unknown app volume type", None)))
       }
     }

@@ -209,7 +209,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
     pod.VolumeMount(volMnt.name, volMnt.mountPath, volMnt.readOnly)
   }
 
-  implicit val volumeMountRmlWrites: Writes[pod.VolumeMount, raml.VolumeMount] = Writes { volMnt =>
+  implicit val volumeMountRamlWrites: Writes[pod.VolumeMount, raml.VolumeMount] = Writes { volMnt =>
     raml.VolumeMount(volMnt.name, volMnt.mountPath, volMnt.readOnly)
   }
 }

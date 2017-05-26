@@ -626,25 +626,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       response.getEntity.toString should include("Feature secrets is not enabled")
     }
 
-    "The secrets feature is NOT enabled and create app (that uses secret defs) fails" in new Fixture(configArgs = Seq()) {
-      Given("The secrets feature is NOT enabled")
-
-      config.isFeatureSet(Features.SECRETS) should be(false)
-
-      And("An app with an envvar secret-def")
-      val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager)
-
-      When("The create request is made")
-      clock += 5.seconds
-      val response = appsResource.create(body, force = false, auth.request)
-
-      Then("It fails")
-      response.getStatus should be(422)
-      response.getEntity.toString should include("requires the secrets feature to be enabled")
-    }
-
     "The secrets feature is NOT enabled and create app (that uses file base secrets) fails" in new Fixture(configArgs = Seq()) {
       Given("The secrets feature is NOT enabled")
 
