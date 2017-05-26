@@ -155,7 +155,6 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   implicit val appVolumeProtoRamlWriter: Writes[Protos.Volume, AppVolume] = Writes {
     case vol if vol.hasExternal => AppExternalVolume(
       containerPath = vol.getContainerPath,
-      hostPath = vol.when(_.hasHostPath, _.getHostPath),
       external = vol.getExternal.toRaml,
       mode = vol.getMode.toRaml
     )

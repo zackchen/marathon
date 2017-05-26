@@ -56,7 +56,6 @@ class VolumeConversionTest extends UnitTest {
         raml shouldBe a[AppExternalVolume]
         val externalRaml = raml.asInstanceOf[AppExternalVolume]
         externalRaml.containerPath should be(volume.containerPath)
-        externalRaml.hostPath should be(empty)
         externalRaml.mode should be(ReadMode.Rw)
         externalRaml.external.name should be(Some(external.name))
         externalRaml.external.options should be(external.options)
@@ -67,8 +66,7 @@ class VolumeConversionTest extends UnitTest {
   }
 
   "RAML external volume conversion" when {
-    val volume = AppExternalVolume("/container", None,
-      ExternalVolume(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla")), ReadMode.Rw)
+    val volume = AppExternalVolume("/container", ExternalVolume(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla")), ReadMode.Rw)
     "converting to core ExternalVolume" should {
       val externalVolume: state.ExternalVolume = Some(volume.fromRaml).collect {
         case v: state.ExternalVolume => v
