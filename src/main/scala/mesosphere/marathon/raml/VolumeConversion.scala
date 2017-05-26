@@ -161,7 +161,6 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     )
     case vol if vol.hasPersistent => AppPersistentVolume(
       containerPath = vol.getContainerPath,
-      hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
       persistent = vol.getPersistent.toRaml,
       mode = vol.getMode.toRaml
     )
