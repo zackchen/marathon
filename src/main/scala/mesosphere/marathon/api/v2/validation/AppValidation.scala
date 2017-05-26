@@ -156,7 +156,7 @@ trait AppValidation {
     import state.PathPatterns._
     val validHostVolume = validator[AppDockerVolume] { v =>
       v.containerPath is valid(notEmpty)
-      v.hostPath is valid(definedAnd(notEmpty))
+      v.hostPath is valid(notEmpty)
     }
     val validSecretVolume = validator[AppSecretVolume] { v =>
       v.containerPath is notEmpty

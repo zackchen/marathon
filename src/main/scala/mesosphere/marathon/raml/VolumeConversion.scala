@@ -53,7 +53,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     volume match {
       case dv: state.DockerVolume => AppDockerVolume(
         volume.containerPath,
-        Some(dv.hostPath),
+        dv.hostPath,
         mode = volume.mode.toRaml)
       case ev: state.ExternalVolume => AppExternalVolume(
         volume.containerPath,
@@ -118,7 +118,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumeDockerReads: Reads[AppDockerVolume, state.Volume] = Reads { vol =>
-    state.DockerVolume(containerPath = vol.containerPath, hostPath = vol.hostPath.getOrElse(""), mode = vol.mode.fromRaml)
+    state.DockerVolume(containerPath = vol.containerPath, hostPath = vol.hostPath, mode = vol.mode.fromRaml)
   }
 
   implicit val volumeSecretReads: Reads[AppSecretVolume, state.Volume] = Reads { vol =>
@@ -155,7 +155,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   implicit val appVolumeProtoRamlWriter: Writes[Protos.Volume, AppVolume] = Writes {
     case vol if vol.hasExternal => AppExternalVolume(
       containerPath = vol.getContainerPath,
-      hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
+      hostPath = vol.when(_.hasHostPath, _.getHostPath),
       external = vol.getExternal.toRaml,
       mode = vol.getMode.toRaml
     )
@@ -170,7 +170,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     )
     case vol => AppDockerVolume(
       containerPath = vol.getContainerPath,
-      hostPath = vol.when(_.hasHostPath, _.getHostPath).orElse(AppDockerVolume.DefaultHostPath),
+      hostPath = vol.getHostPath,
       mode = vol.getMode.toRaml
     )
   }

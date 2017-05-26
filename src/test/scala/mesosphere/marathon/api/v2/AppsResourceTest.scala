@@ -828,7 +828,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
       // although the wrong field should fail
       response.getStatus should be(422)
       response.getEntity.toString should include("/container/volumes(0)/hostPath")
-      response.getEntity.toString should include("not defined")
+      response.getEntity.toString should include("undefined")
     }
 
     "Creating an app with an external volume for an illegal provider should fail" in new Fixture {

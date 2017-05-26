@@ -25,14 +25,14 @@ class VolumeConversionTest extends UnitTest {
         raml shouldBe a[AppDockerVolume]
         val ramlDocker = raml.asInstanceOf[AppDockerVolume]
         ramlDocker.containerPath should be(volume.containerPath)
-        ramlDocker.hostPath should be(Some(volume.hostPath))
+        ramlDocker.hostPath should be(volume.hostPath)
         ramlDocker.mode should be(ReadMode.Rw)
       }
     }
   }
 
   "RAML docker volume conversion" when {
-    val volume = AppDockerVolume(containerPath = "/container", hostPath = Some("/host"), mode = ReadMode.Rw)
+    val volume = AppDockerVolume(containerPath = "/container", hostPath = "/host", mode = ReadMode.Rw)
     "converting to core DockerVolume" should {
       val dockerVolume: DockerVolume = Some(volume.fromRaml).collect {
         case v: DockerVolume => v
@@ -40,7 +40,7 @@ class VolumeConversionTest extends UnitTest {
 
       "convert all fields from RAML to core" in {
         dockerVolume.containerPath should be(volume.containerPath)
-        dockerVolume.hostPath should be(volume.hostPath.head)
+        dockerVolume.hostPath should be(volume.hostPath)
         dockerVolume.mode should be(Mesos.Volume.Mode.RW)
       }
     }

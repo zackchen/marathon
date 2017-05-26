@@ -376,7 +376,7 @@ trait MarathonTest extends StrictLogging with ScalaFutures with Eventually {
           image = "python:3.4.6-alpine"
         )),
         volumes = collection.immutable.Seq(
-          new AppDockerVolume(hostPath = Some(s"$projectDir/src/test/python"), containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          new AppDockerVolume(hostPath = s"$projectDir/src/test/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
         )
       )),
       instances = instances,
