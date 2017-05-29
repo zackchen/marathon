@@ -2,6 +2,7 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.pod
+
 import mesosphere.marathon.state.{ DiskType, ExternalVolumeInfo, PersistentVolumeInfo, SecretVolume }
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
@@ -10,18 +11,15 @@ import org.apache.mesos.{ Protos => Mesos }
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
   implicit val volumeRamlReader: Reads[PodVolume, pod.Volume] = Reads {
-    case ev: EphemeralVolume =>
-      ev.host match {
-        case Some(hostPath) => pod.HostVolume(ev.name, hostPath)
-        case None => core.pod.EphemeralVolume(ev.name)
-      }
+    case ev: EphemeralVolume => core.pod.EphemeralVolume(ev.name)
+    case hv: HostVolume => pod.HostVolume(hv.name, hv.host)
     case sv: PodSecretVolume =>
       core.pod.SecretVolume(sv.name, sv.secret)
   }
 
   implicit val volumeRamlWriter: Writes[pod.Volume, PodVolume] = Writes {
     case e: pod.EphemeralVolume => raml.EphemeralVolume(e.name)
-    case h: pod.HostVolume => raml.EphemeralVolume(h.name, Some(h.hostPath))
+    case h: pod.HostVolume => raml.HostVolume(h.name, h.hostPath)
     case s: pod.SecretVolume => PodSecretVolume(s.name, s.secret)
   }
 
@@ -173,7 +171,6 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       hostPath = vol.getHostPath,
       mode = vol.getMode.toRaml
     )
-    case unsupported => throw SerializationFailedException(s"unsupported pod volume type $unsupported")
   }
 }
 

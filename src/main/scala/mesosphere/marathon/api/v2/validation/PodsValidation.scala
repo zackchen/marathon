@@ -148,11 +148,10 @@ trait PodsValidation {
     }
 
   def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] = new Validator[PodVolume] {
-    val validEphemeralVolume = validator[raml.EphemeralVolume] { v => v.host is optional(notEmpty) }
-
     override def apply(v: raml.PodVolume): Result = {
       v match {
-        case v: raml.EphemeralVolume => validate(v)(validEphemeralVolume)
+        case v: raml.EphemeralVolume => Success
+        case v: raml.HostVolume => Success
         case v: raml.PodSecretVolume => Success
         case _ => Failure(Set(RuleViolation(v, "Unknown pod volume type", None)))
       }
@@ -210,7 +209,8 @@ trait PodsValidation {
 
   def volumeNames(volumes: Seq[PodVolume]) = volumes.map(volumeName)
   def volumeName(volume: PodVolume): String = volume match {
-    case raml.EphemeralVolume(name, _) => name
+    case raml.EphemeralVolume(name) => name
+    case raml.HostVolume(name, _) => name
     case raml.PodSecretVolume(name, _) => name
   }
 }

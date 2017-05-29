@@ -178,7 +178,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
-        response.getEntity.toString should include("use of secrets and secret-references in the environment")
+        response.getEntity.toString should include("Feature secrets is not enabled")
       }
     }
 
