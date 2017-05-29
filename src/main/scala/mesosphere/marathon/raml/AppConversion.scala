@@ -5,7 +5,6 @@ import mesosphere.marathon.Protos.ResidencyDefinition
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.marathon.util.RichTraversable._
 
 import scala.concurrent.duration._
 

@@ -3,7 +3,7 @@ package api.v2
 
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ FetchUri, PathId }
-import mesosphere.marathon.util.RichTraversable._
+import mesosphere.marathon.stream.Implicits._
 
 object AppNormalization {
 

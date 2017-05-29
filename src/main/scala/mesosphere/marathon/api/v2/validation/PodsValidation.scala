@@ -9,7 +9,7 @@ import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.util.SemanticVersion
-import mesosphere.marathon.util.RichTraversable._
+import mesosphere.marathon.stream.Implicits._
 // scalastyle:on
 
 /**

@@ -9,7 +9,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{ AppDefinition, PathId, ResourceRole }
-import mesosphere.marathon.util.RichTraversable._
+import mesosphere.marathon.stream.Implicits._
 
 import scala.util.Try
 

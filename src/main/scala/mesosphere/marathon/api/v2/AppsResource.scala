@@ -22,7 +22,6 @@ import mesosphere.marathon.raml.{ AppConversion, AppExternalVolume, AppPersisten
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RichTraversable._
 import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/apps")
