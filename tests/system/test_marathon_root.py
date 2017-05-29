@@ -355,7 +355,7 @@ def test_pod_secret_env_var(secret_fixture):
 
     secret_name, secret_value = secret_fixture
 
-    pod_id = uuid.uuid4().hex
+    pod_id = '/{}'.format(uuid.uuid4().hex)
     pod_def = {
         "id": pod_id,
         "containers": [{
@@ -417,7 +417,7 @@ def test_pod_file_based_secret(secret_fixture):
     secret_name, secret_value = secret_fixture
     secret_normalized_name = secret_name.replace('/', '')
 
-    pod_id = uuid.uuid4().hex
+    pod_id = '/{}'.format(uuid.uuid4().hex)
 
     pod_def = {
         "id": pod_id,
