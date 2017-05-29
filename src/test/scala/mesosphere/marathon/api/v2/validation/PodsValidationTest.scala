@@ -137,6 +137,18 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         validator(pod) shouldBe (aSuccess)
       }
 
+      "fail if no hostPort is defined in bridge networking" in {
+        val pod = Pod(
+          id = "/bridge",
+          networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
+          containers = Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80)))))
+        )
+
+        val result = validator(pod)
+        result shouldBe (aFailure)
+        result.toString should include("is required when using host-mode or container-bridge networking")
+      }
+
       "allow portMappings that both declare a hostPort and a networkNames" in {
         val app = containerNetworkedPod(
           Seq(podContainer(endpoints = Seq(
