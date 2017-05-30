@@ -23,6 +23,7 @@ node('shakedown') {
     }
 
     stage('Run System Integration Tests'){
+      timeout(90) {
       withCredentials(
         [ [$class: 'FileBinding',
           credentialsId: '11fcc957-5156-4470-ae34-d433da88248a',
@@ -37,7 +38,6 @@ node('shakedown') {
           credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825',
           variable: 'DOCKER_HUB_PASSWORD']
         ]) {
-          timeout(time:2, unit:'HOURS') {
           try {
             sh "cp -f \"${DOT_SHAKEDOWN}\" ~/.shakedown"
             sh "dcos config set core.ssl_verify False"
@@ -54,8 +54,8 @@ node('shakedown') {
             junit allowEmptyResults: true, testResults: 'shakedown.xml'
           }
         }
-      }
     }
+  }
   }
   }
 }
