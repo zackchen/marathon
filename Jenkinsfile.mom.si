@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-timeout(20) {
+timeout(90) {
 node('shakedown') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
