@@ -1,5 +1,6 @@
 #!/usr/bin/env groovy
 
+timeout(20) {
 node('shakedown') {
   wrap([$class: 'MesosSingleUseSlave']) {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm']) {
@@ -23,7 +24,6 @@ node('shakedown') {
     }
 
     stage('Run System Integration Tests'){
-      timeout(90) {
       withCredentials(
         [ [$class: 'FileBinding',
           credentialsId: '11fcc957-5156-4470-ae34-d433da88248a',
@@ -57,5 +57,5 @@ node('shakedown') {
     }
   }
   }
-  }
+}
 }
