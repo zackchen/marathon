@@ -915,22 +915,6 @@ def copy_docker_credentials_file(agents, file_name='docker.tar.gz'):
         os.remove(file_name)
 
 
-def create_secret(secret_name, secret_value):
-    """ Create a secret with a given name and a value.
-        This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
-        package is installed.
-
-        :param secret_name: secret name
-        :type secret_name: str
-        :param secret_value: secret_value
-        :type secret_value: str
-    """
-    escaped_secret_value = escape_cli_arg(secret_value)
-    stdout, stderr, return_code = run_dcos_command(
-        'security secrets create --value="{}" {}'.format(escaped_secret_value, secret_name))
-    assert return_code == 0, "Failed to create a secret: {}".format(secret_name)
-
-
 def has_secret(secret_name):
     """ Returns `True` if the secret with given name exists in the vault.
         This method uses `dcos security secrets` command and assumes that `dcos-enterprise-cli`
@@ -973,7 +957,7 @@ def create_secret(name, value = None, description = None):
     """
     print('Creating new secret {}:{}'.format(name, value))
 
-    value_opt = '-v "{}"'.format(value) if value else ''
+    value_opt = '-v "{}"'.format(escape_cli_arg(value)) if value else ''
     description_opt = '-d "{}"'.format(description) if description else ''
 
     stdout, stderr, return_code = run_dcos_command('security secrets create {} {} "{}"'.format(

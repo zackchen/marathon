@@ -132,7 +132,7 @@ trait AppValidation {
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
         val names: Seq[String] = vols.collect{ case v: AppExternalVolume => v.external.name }.flatten
         names.distinct.size == names.size
-      } and every(valid(validVolume(container, enabledFeatures)))
+      } and every(valid(validVolume(container, enabledFeatures, secrets)))
 
     val validGeneralContainer: Validator[Container] = validator[Container] { container =>
       container.portMappings is optional(portMappingsValidator(networks))
@@ -158,7 +158,7 @@ trait AppValidation {
     )
   }
 
-  def validVolume(container: Container, enabledFeatures: Set[String]): Validator[AppVolume] = new Validator[AppVolume] {
+  def validVolume(container: Container, enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[AppVolume] = new Validator[AppVolume] {
     import state.PathPatterns._
     val validHostVolume = validator[AppDockerVolume] { v =>
       v.containerPath is valid(notEmpty)
@@ -238,12 +238,16 @@ trait AppValidation {
         featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
       )
     }
+    val validSecretVolume: Validator[AppSecretVolume] = {
+      isTrue("volume.secret must refer to an existing secret")(
+        vol => secrets.contains(vol.secret))
+    }
     override def apply(v: AppVolume): Result = {
       v match {
         case v: AppDockerVolume => validate(v)(validHostVolume)
         case v: AppPersistentVolume => validate(v)(validPersistentVolume)
         case v: AppExternalVolume => validate(v)(validExternalVolume)
-        case v: AppSecretVolume => Success // Non emptyness of properties already validated in raml
+        case v: AppSecretVolume => validate(v)(validSecretVolume) // Validate that the secret reference is valid
         case _ => Failure(Set(RuleViolation(v, "Unknown app volume type", None)))
       }
     }
