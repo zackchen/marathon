@@ -819,6 +819,10 @@ def get_marathon_leader_not_on_master_leader_node():
     return marathon_leader
 
 
+def docker_env_set():
+    return 'DOCKER_HUB_USERNAME' not in os.environ and 'DOCKER_HUB_PASSWORD' not in os.environ
+
+
 #############
 #  moving to shakedown  START
 #############

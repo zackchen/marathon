@@ -12,7 +12,7 @@ from distutils.version import LooseVersion
 from urllib.parse import urljoin
 
 from common import (block_port, cluster_info, event_fixture, get_pod_tasks, ip_other_than_mom,
-                    pin_pod_to_host, restore_iptables, save_iptables)
+                    pin_pod_to_host, restore_iptables, save_iptables, docker_env_set)
 from dcos import marathon, util, http
 from shakedown import dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents
 from utils import fixture_dir, get_resource, parse_json

@@ -13,7 +13,8 @@ from datetime import timedelta
 from common import (app, app_mesos, block_port, cluster_info, ensure_mom, group,
                     health_check, ip_of_mom, ip_other_than_mom, pin_to_host,
                     persistent_volume_app, python_http_app, readiness_and_health_app,
-                    restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait)
+                    restore_iptables, nginx_with_ssl_support, command_health_check, delete_all_apps_wait,
+                    docker_env_set)
 from dcos import http, marathon, mesos
 from shakedown import (dcos_1_8, dcos_1_9, dcos_1_10, dcos_version_less_than, private_agents, required_private_agents,
                        marthon_version_less_than, mom_version_less_than, marathon_1_4, ee_version)
@@ -952,10 +953,6 @@ def declined_offer_by_reason(offers, reason):
             return offer
 
     return None
-
-
-def docker_env_set():
-    return 'DOCKER_HUB_USERNAME' not in os.environ and 'DOCKER_HUB_PASSWORD' not in os.environ
 
 
 @pytest.mark.skipif("docker_env_set()")
