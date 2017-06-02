@@ -976,6 +976,10 @@ def test_private_repository_docker_app():
     common.assert_app_tasks_running(client, app_def)
 
 
+@pytest.mark.skip("Failed to launch container: Unexpected HTTP response '401 Unauthorized' when trying to get the manifest")
+# I can't see that this test ever worked.
+# needs: 1) pull the create and remove secrets into a fixture. (which can be reused)
+# 2) fix the unauth issue
 @pytest.mark.skipif("docker_env_set()")
 @dcos_1_10
 def test_private_repository_mesos_app():
@@ -1155,6 +1159,7 @@ def test_network_pinger(test_type, get_pinger_app, dns_format, marathon_service_
 def clear_marathon():
     try:
         common.stop_all_deployments()
+        common.clear_pods()
         common.delete_all_apps_wait()
     except Exception as e:
         print(e)

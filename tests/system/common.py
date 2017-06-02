@@ -533,6 +533,7 @@ def private_docker_pod(secret_name, pod_id=None):
                 }
             }
         }],
+        "networks": [ {"mode": "host"} ],
         "secrets": {
             "pullConfigSecret": {
                 "source": secret_name
@@ -748,6 +749,18 @@ def wait_for_task(service, task, timeout_sec=120):
     return None
 
 
+def clear_pods():
+    # clearing doesn't cause
+    try:
+        client = marathon.create_client()
+        pods = client.list_pod()
+        for pod in pods:
+            client.remove_pod(pod["id"], True)
+        shakedown.deployment_wait()
+    except:
+        pass
+
+
 def get_pod_tasks(pod_id):
     pod_id = pod_id.lstrip('/')
     pod_tasks = []
@@ -931,7 +944,7 @@ def create_secret(secret_name, secret_value):
     """
     escaped_secret_value = escape_cli_arg(secret_value)
     stdout, stderr, return_code = run_dcos_command(
-        'security secrets create --value="{}" {}'.format(escaped_secret_value, secret_name))
+        'security secrets create --value="{}" {}'.format(escaped_secret_value, secret_name), print_output=False)
     assert return_code == 0, "Failed to create a secret: {}".format(secret_name)
 
 
