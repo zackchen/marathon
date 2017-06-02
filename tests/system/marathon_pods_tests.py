@@ -110,7 +110,7 @@ def test_create_pod_with_private_image():
         pod = client.show_pod(pod_def["id"])
         assert pod is not None
     finally:
-        client.delete_secret(secret_name)
+        common.delete_secret(secret_name)
 
 
 @dcos_1_9
