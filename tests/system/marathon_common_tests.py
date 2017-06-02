@@ -165,7 +165,7 @@ def test_docker_port_mappings():
     assert output == "200"
 
 
-def retry_on_exception(exc):
+def ignore_on_exception(exc):
     return isinstance(exc, Exception)
 
 
@@ -270,7 +270,7 @@ def test_bad_user():
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -295,7 +295,7 @@ def test_bad_uri():
     client.add_app(app_def)
 
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=ignore_on_exception)
     def check_failure_message():
         appl = client.get_app(app_id)
         message = appl['lastTaskFailure']['message']
@@ -818,7 +818,7 @@ def test_marathon_with_master_process_failure(marathon_service_name):
     common.systemctl_master()
     shakedown.wait_for_service_endpoint(marathon_service_name)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def check_task_recovery():
         tasks = client.get_tasks('/master-failure')
         tasks[0]['id'] == original_task_id
@@ -929,7 +929,7 @@ def _test_declined_offer(app_id, app_def, reason):
     client = marathon.create_client()
     client.add_app(app_def)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=retry_on_exception)
+    @retrying.retry(wait_fixed=1000, stop_max_delay=10000, retry_on_exception=ignore_on_exception)
     def verify_declined_offer():
         deployments = client.get_deployments(app_id)
         assert len(deployments) == 1
