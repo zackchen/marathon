@@ -137,7 +137,7 @@ trait AppValidation {
     val validGeneralContainer: Validator[Container] = validator[Container] { container =>
       container.portMappings is optional(portMappingsValidator(networks))
       container.volumes is volumesValidator(container)
-      container.volumes.filterPF { case sv: AppSecretVolume => true } is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+      container.volumes.filterPF { case _: AppSecretVolume => true } is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     }
 
     val mesosContainerImageValidator = new Validator[Container] {
