@@ -649,6 +649,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation {
 
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
+        secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
       val (body, plan) = prepareApp(app, groupManager)
 

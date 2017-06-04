@@ -3,8 +3,8 @@ package api.v2.validation
 
 import com.wix.accord.Validator
 import com.wix.accord.scalatest.ResultMatchers
-import mesosphere.{ UnitTest, ValidationTestLike }
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, Endpoint, EnvVarSecret, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, Resources, SecretDef, VolumeMount }
+import mesosphere.{UnitTest, ValidationTestLike}
+import mesosphere.marathon.raml.{Constraint, ConstraintOperator, Endpoint, EnvVarSecret, EphemeralVolume, Network, NetworkMode, Pod, PodContainer, PodSecretVolume, Resources, SecretDef, VolumeMount}
 import mesosphere.marathon.util.SemanticVersion
 
 class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidation with SchedulingValidation with ValidationTestLike {
@@ -74,6 +74,16 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
       validator(invalid) should failWith("volumes" -> PodsValidationMessages.VolumeNamesMustBeUnique)
+    }
+
+    "be rejected if a secret volume is defined without a corresponding secret" in new Fixture {
+      val volume = PodSecretVolume("volume", "foo")
+      val volumeMount = VolumeMount(volume.name, "/bla")
+      private val invalid = validPod.copy(
+        volumes = Seq(volume),
+        containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
+      )
+      validator(invalid).toString should include(PodsValidationMessages.SecretVolumeMustReferenceSecret)
     }
   }
 

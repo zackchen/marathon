@@ -142,6 +142,12 @@ trait PodsValidation {
     }
   }
 
+  def secretVolumesValidator(secrets: Map[String, SecretDef]): Validator[PodSecretVolume] = validator[PodSecretVolume] { vol =>
+    vol.secret is isTrue(SecretVolumeMustReferenceSecret) {
+      secrets.contains(_)
+    }
+  }
+
   val artifactValidator = validator[Artifact] { artifact =>
     artifact.uri.length is between(1, 1024)
     artifact.destPath.map(_.length).getOrElse(1) is between(1, 1024)
@@ -198,6 +204,7 @@ trait PodsValidation {
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
     pod.volumes.filterPF { case sv: PodSecretVolume => true } is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+    pod.volumes.collect { case sv: PodSecretVolume => sv } is empty or every(secretVolumesValidator(pod.secrets))
     pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
       val names = volumeNames(volumes)
       names.distinct.size == names.size
@@ -232,6 +239,7 @@ object PodsValidationMessages {
   val HostPortsMustBeUnique = "host ports must be unique across all containers"
   val VolumeNamesMustBeUnique = "volume names must be unique"
   val ContainerNamesMustBeUnique = "container names must be unique"
+  val SecretVolumeMustReferenceSecret = "volume.secret must refer to an existing secret"
   // Note: we should keep this in sync with AppValidationMessages
   val NetworkNameRequiredForMultipleContainerNetworks =
     "networkNames must be a single item list when hostPort is specified and more than 1 container network is defined"
