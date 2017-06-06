@@ -20,6 +20,7 @@ class AppValidationTest extends UnitTest with ResultMatchers with ValidationTest
         )
         val validation = basicValidator(app)
         validation.isFailure shouldBe true
+        // Here and below: stringifying validation is admittedly not the best way but it's a nested Set(GroupViolation...) and not easy to test.
         validation.toString should include ("Feature secrets is not enabled. Enable with --enable_features secrets")
       }
     }

@@ -83,6 +83,7 @@ class PodsValidationTest extends UnitTest with ResultMatchers with PodsValidatio
         volumes = Seq(volume),
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
+      // Here and below: stringifying validation is admittedly not the best way but it's a nested Set(GroupViolation...) and not easy to test.
       validator(invalid).toString should include(PodsValidationMessages.SecretVolumeMustReferenceSecret)
     }
   }
