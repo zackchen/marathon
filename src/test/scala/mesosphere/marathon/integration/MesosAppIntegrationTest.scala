@@ -187,10 +187,10 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForDeployment(updateResult)
 
       When("The pod should be deleted")
-      val deleteResult = marathon.deletePod(pod.id)
+      val deleteResult = marathon.deletePod(pod.id, force = true)
 
       Then("The pod is deleted")
-      deleteResult.code should be(202) // Deleted
+      deleteResult.code should be(202) withClue s"Response: ${deleteResult.entityString}" // Delete
       waitForDeployment(deleteResult)
     }
 
